@@ -92,13 +92,13 @@ async function fetchYTStats(titles, channelSearch) {
 }
 
 async function callClaude(prompt, maxTokens=800) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch("/api/claude", {
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:maxTokens, messages:[{role:"user",content:prompt}] })
+    body: JSON.stringify({ prompt, maxTokens })
   });
   const data = await res.json();
-  return data.content?.[0]?.text || "";
+  return data.text || "";
 }
 
 async function generateTakeaways(showName, episodes) {
