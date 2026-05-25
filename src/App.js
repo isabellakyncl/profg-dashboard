@@ -101,17 +101,46 @@ async function callClaude(prompt, maxTokens=800) {
   return data.text || "";
 }
 
-async function generateTakeaways(showName, episodes) {
-  const top3 = [...episodes].sort((a,b)=>b.d7-a.d7).slice(0,3);
-  const bottom3 = [...episodes].sort((a,b)=>a.d7-b.d7).slice(0,3);
-  const prompt = `You are a podcast strategy analyst for ${showName}.
-Top 3 episodes: ${top3.map(e=>`"${e.title}" (${fmt(e.d7)} 7d downloads)`).join(" | ")}
-Bottom 3: ${bottom3.map(e=>`"${e.title}" (${fmt(e.d7)} 7d)`).join(" | ")}
-Avg 7d downloads: ${fmt(showAvg(episodes,"d7"))}
+function episodeAgedays(dateStr) {
+  try {
+    const parts = dateStr.split("/");
+    const d = new Date(parts[2], parseInt(parts[0])-1, parseInt(parts[1]));
+    return Math.floor((Date.now() - d.getTime()) / (1000*60*60*24));
+  } catch { return 999; }
+}
 
-Give 3 specific actionable recommendations. Reference actual titles/topics from the data. Not generic advice.
+function matureEpisodes(episodes) {
+  return episodes.filter(e => episodeAgedays(e.date) >= 7);
+}
+
+async function generateTakeaways(showName, episodes) {
+  const mature = matureEpisodes(episodes);
+  const recent = episodes.filter(e => episodeAgedays(e.date) < 7);
+  const top3 = [...mature].sort((a,b)=>b.d7-a.d7).slice(0,3);
+  const bottom3 = [...mature].sort((a,b)=>a.d7-b.d7).slice(0,3);
+  const avgD7 = showAvg(mature,"d7");
+  
+  // Rolling 4-week avg vs prior 4-week avg
+  const sorted = [...mature].sort((a,b) => episodeAgedays(a.date) - episodeAgedays(b.date));
+  const last4 = sorted.slice(-4); const prior4 = sorted.slice(-8,-4);
+  const last4avg = last4.length ? Math.round(last4.map(e=>e.d7).reduce((a,b)=>a+b,0)/last4.length) : 0;
+  const prior4avg = prior4.length ? Math.round(prior4.map(e=>e.d7).reduce((a,b)=>a+b,0)/prior4.length) : 0;
+  const trend = prior4avg ? Math.round(((last4avg-prior4avg)/prior4avg)*100) : 0;
+  
+  const dateRange = mature.length ? `${mature[mature.length-1].date} to ${mature[0].date}` : "recent episodes";
+  
+  const prompt = `You are a podcast strategy analyst for ${showName}.
+
+Analysis period: ${dateRange} (${mature.length} episodes with full 7-day data)
+${recent.length > 0 ? `Note: ${recent.length} episode(s) excluded — too recent for 7-day comparison.` : ""}
+
+Top 3 episodes: ${top3.map(e=>`"${e.title}" (${fmt(e.d7)} 7d, ${episodeAgedays(e.date)} days ago)`).join(" | ")}
+Bottom 3: ${bottom3.map(e=>`"${e.title}" (${fmt(e.d7)} 7d)`).join(" | ")}
+Avg 7d: ${fmt(avgD7)} | Last 4-week avg: ${fmt(last4avg)} | Prior 4-week avg: ${fmt(prior4avg)} | Trend: ${trend > 0 ? "+" : ""}${trend}%
+
+Give 3 specific actionable recommendations. Reference actual titles/topics. Not generic advice.
 Respond ONLY in JSON (no markdown):
-{"takeaways":[{"title":"<action>","detail":"<2 sentences with evidence>"},{"title":"","detail":""},{"title":"","detail":""}]}`;
+{"takeaways":[{"title":"<action>","detail":"<2 sentences with specific evidence>"},{"title":"","detail":""},{"title":"","detail":""}],"period":"${dateRange}","trend":"${trend > 0 ? "+" : ""}${trend}% vs prior 4 weeks"}`;
   try {
     const raw = await callClaude(prompt, 600);
     return JSON.parse(raw.replace(/```json|```/g,"").trim());
@@ -306,15 +335,26 @@ function HomePage() {
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px",marginBottom:"28px"}}>
         {shows.map(s=>{
-          const best=topEp(s.data); const avg=showAvg(s.data,"d7");
+          const best=topEp(s.data);
+          const mature=matureEpisodes(s.data);
+          const sorted=[...mature].sort((a,b)=>episodeAgedays(a.date)-episodeAgedays(b.date));
+          const last4=sorted.slice(-4); const prior4=sorted.slice(-8,-4);
+          const last4avg=last4.length?Math.round(last4.map(e=>e.d7).reduce((a,b)=>a+b,0)/last4.length):0;
+          const prior4avg=prior4.length?Math.round(prior4.map(e=>e.d7).reduce((a,b)=>a+b,0)/prior4.length):0;
+          const trend=prior4avg?Math.round(((last4avg-prior4avg)/prior4avg)*100):0;
+          const recentCount=s.data.filter(e=>episodeAgedays(e.date)<7).length;
           return (
             <div key={s.id} style={{background:"#141414",border:"1px solid #222",borderRadius:"2px",padding:"20px"}}>
               <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"14px"}}>
                 <div style={{width:"3px",height:"16px",background:s.color,borderRadius:"1px"}}/>
                 <span style={{fontSize:"12px",fontWeight:"500",color:s.color}}>{s.name}</span>
               </div>
-              <div style={{fontSize:"24px",fontWeight:"700",color:"#fff",fontFamily:"'Playfair Display',serif",marginBottom:"2px"}}>{fmt(avg)}</div>
-              <div style={{fontSize:"11px",color:"#555",marginBottom:"14px"}}>avg 7-day downloads</div>
+              <div style={{fontSize:"24px",fontWeight:"700",color:"#fff",fontFamily:"'Playfair Display',serif",marginBottom:"2px"}}>{fmt(last4avg)}</div>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"14px"}}>
+                <div style={{fontSize:"11px",color:"#555"}}>rolling 4-week avg</div>
+                {prior4avg>0&&<div style={{fontSize:"11px",fontWeight:"500",color:trend>=0?"#4CAF50":"#E8481C"}}>{trend>=0?"+":""}{trend}% vs prior 4wk</div>}
+              </div>
+              {recentCount>0&&<div style={{fontSize:"11px",color:"#666",marginBottom:"8px"}}>⚠ {recentCount} ep too recent for 7d comparison</div>}
               <div style={{fontSize:"12px",color:"#ccc",lineHeight:"1.5",marginBottom:"4px"}}>{best?.title?.slice(0,55)}{(best?.title?.length||0)>55?"…":""}</div>
               <div style={{fontSize:"11px",color:"#555"}}>{fmt(best?.d7)} 7d · top episode</div>
             </div>
