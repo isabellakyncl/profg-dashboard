@@ -326,9 +326,10 @@ function SentimentBtn({episode,showName,color}) {
 }
 
 
-function InsightsPanel({show}) {
-  const {name, color, data} = show;
-  const mature = matureEpisodes(data);
+function InsightsPanel({show, episodes}) {
+  const {name, color} = show;
+  const liveData = episodes && episodes.length > 0 ? episodes : show.data;
+  const mature = matureEpisodes(liveData);
   const [guests, setGuests] = useState(null);
   const [topics, setTopics] = useState(null);
   const [titles, setTitles] = useState(null);
@@ -503,7 +504,7 @@ function ShowPage({show}) {
           </table>
         </div>
       </div>
-    <InsightsPanel show={show}/>
+    <InsightsPanel show={show} episodes={episodes}/>
     </div>
   );
 }
