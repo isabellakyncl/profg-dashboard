@@ -198,30 +198,46 @@ Respond ONLY in JSON (no markdown):
   } catch { return null; }
 }
 
-async function runTopicAnalysis(showName, episodes) {
+async function runTopicAnalysis(showName, episodes, ytVideos) {
   const mature = matureEps(episodes);
+  const hasYT = ytVideos && ytVideos.length > 0;
+  const ytAvg = hasYT ? Math.round(ytVideos.map(v=>v.ytViews).reduce((a,b)=>a+b,0)/ytVideos.length) : 0;
+  const episodeData = hasYT
+    ? ytVideos.map(v=>`"${v.ytTitle}" — ${fmt(v.ytViews)} YT views`)
+    : mature.map(e=>`"${e.title}" — ${fmt(e.d7)} 7d downloads`);
+  const metric = hasYT ? "YouTube views" : "7-day downloads";
+  const avg = hasYT ? fmt(ytAvg) : fmt(showAvg(mature,"d7"));
   const prompt = `You are analyzing topic performance for ${showName}.
-Episodes: ${mature.map(e=>`"${e.title}" — ${fmt(e.d7)} 7d`).join("\n")}
-Show avg: ${fmt(showAvg(mature,"d7"))} 7d
+Episodes by ${metric}: 
+${episodeData.join("\n")}
+Show avg: ${avg} ${metric}
 
-Tag each episode with 1-3 topics and calculate avg performance by topic.
+Tag each episode with 1-3 topics and calculate avg performance by topic vs show baseline.
 Respond ONLY in JSON (no markdown):
-{"topicPerformance":[{"topic":"<topic>","avgD7":<number>,"episodeCount":<number>,"vsBaseline":"<e.g. +18%>"}],"topTopic":"<best topic>","weakTopic":"<worst topic>","insight":"<1-2 sentence finding with numbers>"}`;
+{"topicPerformance":[{"topic":"<topic>","avgD7":<number>,"episodeCount":<number>,"vsBaseline":"<e.g. +18%>"}],"topTopic":"<best topic>","weakTopic":"<worst topic>","insight":"<1-2 sentence finding with numbers>","metric":"${metric}"}`;
   try {
     const raw = await callClaude(prompt, 700);
     return JSON.parse(raw.replace(/```json|```/g,"").trim());
   } catch { return null; }
 }
 
-async function runTitleAnalysis(showName, episodes) {
+async function runTitleAnalysis(showName, episodes, ytVideos) {
   const mature = matureEps(episodes);
+  const hasYT = ytVideos && ytVideos.length > 0;
+  const ytAvg = hasYT ? Math.round(ytVideos.map(v=>v.ytViews).reduce((a,b)=>a+b,0)/ytVideos.length) : 0;
+  const episodeData = hasYT
+    ? ytVideos.map(v=>`"${v.ytTitle}" — ${fmt(v.ytViews)} YT views`)
+    : mature.map(e=>`"${e.title}" — ${fmt(e.d7)} 7d downloads`);
+  const metric = hasYT ? "YouTube views" : "7-day downloads";
+  const avg = hasYT ? fmt(ytAvg) : fmt(showAvg(mature,"d7"));
   const prompt = `Analyze title patterns for ${showName}.
-Episodes: ${mature.map(e=>`"${e.title}" — ${fmt(e.d7)} 7d`).join("\n")}
-Show avg: ${fmt(showAvg(mature,"d7"))} 7d
+Episodes by ${metric}:
+${episodeData.join("\n")}
+Show avg: ${avg} ${metric}
 
-Analyze: questions vs statements, titles with numbers, titles with "&" or "+", title length, guest name in title.
+Analyze: questions vs statements, titles with numbers, titles with "&" or "+", title length (<6 words vs longer), guest name in title.
 Respond ONLY in JSON (no markdown):
-{"patterns":[{"pattern":"<pattern>","avgD7":<number>,"count":<number>,"vsBaseline":"<e.g. +12%>","examples":["<title1>","<title2>"]}],"bestPattern":"<winner>","insight":"<1-2 sentence actionable finding>"}`;
+{"patterns":[{"pattern":"<pattern>","avgD7":<number>,"count":<number>,"vsBaseline":"<e.g. +12%>","examples":["<title1>","<title2>"]}],"bestPattern":"<winner>","insight":"<1-2 sentence actionable finding>","metric":"${metric}"}`;
   try {
     const raw = await callClaude(prompt, 700);
     return JSON.parse(raw.replace(/```json|```/g,"").trim());
@@ -317,8 +333,8 @@ function InsightsPanel({show, seedEpisodes, ytVideos}) {
   const load = async (type) => {
     setLoading(prev=>({...prev,[type]:true}));
     if (type==="guests") { const r=await runGuestAnalysis(name,mature,ytVideos); setGuests(r); }
-    if (type==="topics") { const r=await runTopicAnalysis(name,mature); setTopics(r); }
-    if (type==="titles") { const r=await runTitleAnalysis(name,mature); setTitles(r); }
+    if (type==="topics") { const r=await runTopicAnalysis(name,mature,ytVideos); setTopics(r); }
+    if (type==="titles") { const r=await runTitleAnalysis(name,mature,ytVideos); setTitles(r); }
     setLoading(prev=>({...prev,[type]:false}));
   };
 
@@ -331,12 +347,13 @@ function InsightsPanel({show, seedEpisodes, ytVideos}) {
         </button>
       </div>
       {!result&&!loading[type]&&<div style={{fontSize:"12px",color:"#444",fontStyle:"italic"}}>
-        {type==="guests"&&ytVideos.length>0?`Using ${ytVideos.length} live YouTube episodes with descriptions.`:"Click Run Analysis to generate insights."}
+        {type==="guests"?ytVideos.length>0?`Using ${ytVideos.length} live YouTube episodes with descriptions.`:"Load Live YouTube Stats first for best results — will use spreadsheet titles only otherwise.":ytVideos.length>0?`Using ${ytVideos.length} live YouTube episodes as primary data source.`:"Click Run Analysis — or load YouTube stats first for richer data."}
       </div>}
       {loading[type]&&<div style={{fontSize:"12px",color:"#555"}}>Analyzing{type==="guests"&&ytVideos.length>0?` ${ytVideos.length} YouTube episodes`:""}…</div>}
       
       {result&&type==="guests"&&(
         <div>
+          <div style={{fontSize:"10px",color:"#444",marginBottom:"10px"}}>Guest ep avg uses spreadsheet download data. "—" = recent YouTube episode not yet in your downloads sheet.</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px",marginBottom:"12px"}}>
             {[
               {label:"Guest ep avg",val:result.guestAvg>0?fmt(result.guestAvg):"—"},
@@ -362,6 +379,7 @@ function InsightsPanel({show, seedEpisodes, ytVideos}) {
       {result&&type==="topics"&&(
         <div>
           {result.insight&&<div style={{fontSize:"12px",color:"#888",lineHeight:"1.65",marginBottom:"12px",paddingLeft:"10px",borderLeft:`2px solid ${color}44`}}>{result.insight}</div>}
+          <div style={{fontSize:"10px",color:"#444",marginBottom:"10px"}}>% = vs show's own average {result.metric||"7-day downloads"}</div>
           {result.topicPerformance?.slice(0,6).map((t,i)=>(
             <div key={i} style={{display:"flex",alignItems:"center",gap:"10px",padding:"6px 0",borderBottom:"1px solid #1a1a1a"}}>
               <div style={{flex:1,fontSize:"12px",color:"#ccc"}}>{t.topic}</div>
@@ -375,6 +393,7 @@ function InsightsPanel({show, seedEpisodes, ytVideos}) {
       {result&&type==="titles"&&(
         <div>
           {result.insight&&<div style={{fontSize:"12px",color:"#888",lineHeight:"1.65",marginBottom:"12px",paddingLeft:"10px",borderLeft:`2px solid ${color}44`}}>{result.insight}</div>}
+          <div style={{fontSize:"10px",color:"#444",marginBottom:"10px"}}>% = vs show's own average {result.metric||"7-day downloads"}</div>
           {result.patterns?.map((p,i)=>(
             <div key={i} style={{marginBottom:"10px",paddingBottom:"10px",borderBottom:"1px solid #1a1a1a"}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:"4px"}}>
