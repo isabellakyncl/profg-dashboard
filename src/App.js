@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 const PASSWORD = "profg2025";
 const YT_API_KEY = process.env.REACT_APP_YT_API_KEY;
+const SHEET_ID = process.env.REACT_APP_SHEET_ID || "18P2XCl0oi2_B-xpb3SgW2qUopbv-Vbzqp4sB9v7Zsn8";
 const PGM_CHANNEL_ID = "UCp4CBeq4nzeg9smAvdjPrig";
 
 // ── Seed download data from your spreadsheet ─────────────────────────────────
@@ -358,7 +359,7 @@ async function fetchYouTubeData(channelId) {
   if (!YT_API_KEY || !channelId) return [];
   try {
     const searchRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&maxResults=25&order=date&type=video&key=${YT_API_KEY}`
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&maxResults=50&order=date&type=video&key=${YT_API_KEY}`
     );
     const searchData = await searchRes.json();
     if (!searchData.items || searchData.items.length === 0) return [];
@@ -389,6 +390,38 @@ async function fetchYouTubeData(channelId) {
     });
   } catch(e) {
     console.error("YouTube API error:", e);
+    return [];
+  }
+}
+
+
+// ── Google Sheet Live Fetch ───────────────────────────────────────────────────
+async function fetchSheetData(sheetId, sheetName="Sheet1") {
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}?key=${YT_API_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.values || data.values.length < 2) return [];
+    
+    const [headers, ...rows] = data.values;
+    const dateIdx = headers.findIndex(h => h.toLowerCase().includes("date") || h.toLowerCase().includes("release"));
+    const titleIdx = headers.findIndex(h => h.toLowerCase().includes("episode") || h.toLowerCase().includes("title"));
+    const d7Idx = headers.findIndex(h => h.toLowerCase().includes("7") && (h.toLowerCase().includes("day") || h.toLowerCase().includes("download")));
+    const d30Idx = headers.findIndex(h => h.toLowerCase().includes("30") && (h.toLowerCase().includes("day") || h.toLowerCase().includes("download")));
+    
+    if (dateIdx === -1 || titleIdx === -1) return [];
+    
+    return rows
+      .filter(r => r[dateIdx] && r[titleIdx])
+      .map(r => ({
+        date: r[dateIdx]?.trim() || "",
+        title: r[titleIdx]?.trim() || "",
+        d7: parseInt((r[d7Idx]||"0").replace(/[^0-9]/g,""))||0,
+        d30: parseInt((r[d30Idx]||"0").replace(/[^0-9]/g,""))||0,
+      }))
+      .filter(e => e.d7 > 0);
+  } catch(e) {
+    console.error("Sheet fetch error:", e);
     return [];
   }
 }
@@ -718,17 +751,34 @@ function ShowPage({show}) {
   const [ytLoaded,setYtLoaded]=useState(false);
   const [sort,setSort]=useState("d7");
   const [episodes]=useState(data);
+  const [liveEpisodes,setLiveEpisodes]=useState(data);
 
   const loadYT = async () => {
     setYtLoading(true);
-    const videos = await fetchYouTubeData(channelId);
+    // Fetch YouTube and Sheet in parallel
+    const [videos, sheetEps] = await Promise.all([
+      fetchYouTubeData(channelId),
+      fetchSheetData(SHEET_ID)
+    ]);
     setYtVideos(videos);
+    // Merge sheet data: sheet episodes not already in seed data
+    if (sheetEps.length > 0) {
+      const seedTitles = new Set(data.map(e => e.title.toLowerCase().slice(0,30)));
+      const newEps = sheetEps.filter(e => !seedTitles.has(e.title.toLowerCase().slice(0,30)));
+      if (newEps.length > 0) {
+        setLiveEpisodes([...data, ...newEps].sort((a,b) => {
+          const da = new Date(a.date.split("/").length===3?`${a.date.split("/")[2]}-${a.date.split("/")[0].padStart(2,"0")}-${a.date.split("/")[1].padStart(2,"0")}`:a.date);
+          const db = new Date(b.date.split("/").length===3?`${b.date.split("/")[2]}-${b.date.split("/")[0].padStart(2,"0")}-${b.date.split("/")[1].padStart(2,"0")}`:b.date);
+          return da - db;
+        }));
+      }
+    }
     setYtLoaded(true);
     setYtLoading(false);
   };
 
-  const mature = matureEps(episodes);
-  const sorted = [...episodes].sort((a,b)=>(b[sort]||0)-(a[sort]||0));
+  const mature = matureEps(liveEpisodes);
+  const sorted = [...liveEpisodes].sort((a,b)=>(b[sort]||0)-(a[sort]||0));
   const last4 = [...mature].sort((a,b)=>episodeAgeDays(a.date)-episodeAgeDays(b.date)).slice(-4);
   const prior4 = [...mature].sort((a,b)=>episodeAgeDays(a.date)-episodeAgeDays(b.date)).slice(-8,-4);
   const last4avg = last4.length?Math.round(last4.map(e=>e.d7||0).reduce((a,b)=>a+b,0)/last4.length):0;
@@ -750,7 +800,7 @@ function ShowPage({show}) {
           {!ytLoaded&&<button onClick={loadYT} disabled={ytLoading} style={{background:"transparent",border:`1px solid ${color}55`,color,padding:"4px 12px",fontSize:"11px",cursor:"pointer",fontFamily:"'DM Mono',monospace",borderRadius:"2px",textTransform:"uppercase",letterSpacing:".08em"}}>
             {ytLoading?"Loading…":"Load Live YouTube Stats"}
           </button>}
-          {ytLoaded&&<span style={{fontSize:"11px",color:"#4CAF50"}}>✓ {ytVideos.length} YouTube episodes loaded</span>}
+          {ytLoaded&&<span style={{fontSize:"11px",color:"#4CAF50"}}>✓ {ytVideos.length} YT episodes + live sheet data loaded ({liveEpisodes.length} total)</span>}
         </div>
       </div>
 
