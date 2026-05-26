@@ -44,9 +44,9 @@ const SEED_RM = [
 ];
 
 const SHOWS = {
-  pgm: { id:"pgm", name:"Prof G Markets",   color:"#E8481C", data: SEED_PGM, channelSearch:"Prof G Markets podcast" },
-  pgp: { id:"pgp", name:"Prof G Pod",       color:"#ffffff", data: SEED_PGP, channelSearch:"Prof G Pod Scott Galloway" },
-  rm:  { id:"rm",  name:"Raging Moderates", color:"#4A6FA5", data: SEED_RM,  channelSearch:"Raging Moderates podcast" },
+  pgm: { id:"pgm", name:"Prof G Markets",   color:"#E8481C", data: SEED_PGM, channelId:"UCp4CBeq4nzeg9smAvdjPrig", channelSearch:"Prof G Markets podcast" },
+  pgp: { id:"pgp", name:"Prof G Pod",       color:"#ffffff", data: SEED_PGP, channelId:"UC1E1SVcVyU3ntWMSQEp38Yw",     channelSearch:"Prof G Pod Scott Galloway" },
+  rm:  { id:"rm",  name:"Raging Moderates", color:"#4A6FA5", data: SEED_RM,  channelId:"",                              channelSearch:"Raging Moderates podcast" },
 };
 
 function fmt(n) {
@@ -65,14 +65,17 @@ function engRate(ep) {
   return (((ep.ytLikes||0)+(ep.ytComments||0))/ep.ytViews*100).toFixed(1);
 }
 
-async function fetchYTStats(titles, channelSearch) {
+async function fetchYTStats(titles, channelSearch, channelId) {
   if (!YT_API_KEY) return {};
   try {
-    const searchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(channelSearch)}&type=channel&key=${YT_API_KEY}`);
-    const searchData = await searchRes.json();
-    const channelId = searchData.items?.[0]?.id?.channelId;
-    if (!channelId) return {};
-    const vidRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&maxResults=20&order=date&type=video&key=${YT_API_KEY}`);
+    let chId = channelId;
+    if (!chId) {
+      const searchRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(channelSearch)}&type=channel&key=${YT_API_KEY}`);
+      const searchData = await searchRes.json();
+      chId = searchData.items?.[0]?.id?.channelId;
+    }
+    if (!chId) return {};
+    const vidRes = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${chId}&maxResults=25&order=date&type=video&key=${YT_API_KEY}`);
     const vidData = await vidRes.json();
     if (!vidData.items) return {};
     const ids = vidData.items.map(v=>v.id.videoId).join(",");
@@ -80,11 +83,17 @@ async function fetchYTStats(titles, channelSearch) {
     const statsData = await statsRes.json();
     const result = {};
     statsData.items?.forEach(v => {
+      // Extract guest from description - look for "with [Name]", "joins", "guest:"
+      const desc = v.snippet.description || "";
+      const guestMatch = desc.match(/(?:speaks with|joined by|with guest|guest:?)\s+([A-Z][a-z]+ [A-Z][a-z]+)/i) ||
+                         v.snippet.title.match(/(?:with|ft\.?|feat\.?)\s+([A-Z][a-z]+ [A-Z][a-z]+)/i);
       result[v.snippet.title] = {
         ytViews: parseInt(v.statistics.viewCount)||0,
         ytLikes: parseInt(v.statistics.likeCount)||0,
         ytComments: parseInt(v.statistics.commentCount)||0,
         ytId: v.id,
+        ytDescription: desc.slice(0, 500),
+        guest: guestMatch?.[1] || null,
       };
     });
     return result;
@@ -148,24 +157,25 @@ Respond ONLY in JSON (no markdown):
 }
 
 async function analyzeGuestPerformance(showName, episodes) {
+  const withGuests = episodes.filter(e => e.guest || e.ytDescription);
   const prompt = `You are analyzing podcast episode performance for ${showName}.
 
-Episode data:
-${episodes.map(e => `"${e.title}" — ${fmt(e.d7)} 7d downloads`).join('\n')}
+Episode data (title, downloads, guest if known, YT description excerpt):
+${episodes.map(e => `"${e.title}" — ${fmt(e.d7)} 7d${e.guest ? ` — GUEST: ${e.guest}` : ""}${e.ytDescription ? ` — DESC: ${e.ytDescription.slice(0,150)}` : ""}`).join('\n')}
 
 Tasks:
-1. Identify which episodes likely feature named guests (look for guest names, interview-style titles, "with [Name]" patterns)
-2. Calculate if guest episodes outperform or underperform solo/discussion episodes
-3. Identify the highest-performing guest types or names
+1. Identify ALL episodes featuring named guests using the guest field and description clues ("speaks with", "joined by", "joins Ed", guest names mentioned)
+2. Calculate avg downloads for guest vs solo episodes
+3. Rank guest types or names by performance
 
 Respond ONLY in JSON (no markdown):
 {
-  "guestEpisodes": [{"title": "<episode title>", "guest": "<guest name or type>", "d7": <number>}],
+  "guestEpisodes": [{"title": "<episode title>", "guest": "<guest name>", "d7": <number>}],
   "soloAvg": <average d7 of non-guest episodes>,
   "guestAvg": <average d7 of guest episodes>,
   "delta": "<e.g. +23% vs baseline>",
-  "topGuests": ["<name/type 1>", "<name/type 2>"],
-  "insight": "<1-2 sentence finding>"
+  "topGuests": ["<name 1>", "<name 2>"],
+  "insight": "<1-2 sentence finding with specific numbers>"
 }`;
   try {
     const res = await fetch("/api/claude", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt, maxTokens: 700 }) });
@@ -414,7 +424,7 @@ function ShowPage({show}) {
 
   const loadYT=async()=>{
     setYtLoading(true);
-    const stats=await fetchYTStats(episodes.map(e=>e.title),channelSearch);
+    const stats=await fetchYTStats(episodes.map(e=>e.title),channelSearch,show.channelId);
     setEpisodes(prev=>prev.map(ep=>{
       const match=Object.keys(stats).find(k=>k.toLowerCase().includes(ep.title.toLowerCase().slice(0,20)));
       return match?{...ep,...stats[match]}:ep;
