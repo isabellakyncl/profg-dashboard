@@ -426,10 +426,32 @@ function ShowPage({show}) {
   const loadYT=async()=>{
     setYtLoading(true);
     const stats=await fetchYTStats(episodes.map(e=>e.title),channelSearch,show.channelId);
-    setEpisodes(prev=>prev.map(ep=>{
-      const match=Object.keys(stats).find(k=>k.toLowerCase().includes(ep.title.toLowerCase().slice(0,20)));
-      return match?{...ep,...stats[match]}:ep;
-    }));
+    if (Object.keys(stats).length > 0) {
+      // Merge YouTube data by trying title match, also add any new YT episodes
+      const updated = episodes.map(ep=>{
+        // Try various match strategies
+        const exactMatch = stats[ep.title];
+        const partialMatch = Object.keys(stats).find(k => 
+          k.toLowerCase().includes(ep.title.toLowerCase().slice(0,25)) ||
+          ep.title.toLowerCase().includes(k.toLowerCase().slice(0,25))
+        );
+        const match = exactMatch ? ep.title : partialMatch;
+        return match ? {...ep, ...stats[match]} : ep;
+      });
+      // Also add YT-only episodes not in seed data
+      const ytOnlyEps = Object.entries(stats)
+        .filter(([title]) => !episodes.some(ep => 
+          ep.title.toLowerCase().includes(title.toLowerCase().slice(0,20)) ||
+          title.toLowerCase().includes(ep.title.toLowerCase().slice(0,20))
+        ))
+        .map(([title, data]) => ({
+          date: new Date().toLocaleDateString(),
+          title: title.replace(/^Prof G Markets:\s*/i, '').replace(/^Prof G Pod:\s*/i, ''),
+          d7: 0, d30: 0,
+          ...data
+        }));
+      setEpisodes([...updated, ...ytOnlyEps]);
+    }
     setYtLoaded(true);
     setYtLoading(false);
   };
