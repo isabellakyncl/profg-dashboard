@@ -567,12 +567,37 @@ function ShowPage({show}) {
 function HomePage() {
   const shows = Object.values(SHOWS);
   const today = new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+  const [ytData, setYtData] = useState({});
+  const [ytLoading, setYtLoading] = useState(false);
+
+  useEffect(() => {
+    const loadAll = async () => {
+      setYtLoading(true);
+      const results = {};
+      for (const show of shows) {
+        if (show.channelId) {
+          const videos = await fetchYouTubeData(show.channelId);
+          if (videos.length > 0) {
+            results[show.id] = {
+              avgViews: Math.round(videos.map(v=>v.ytViews).reduce((a,b)=>a+b,0)/videos.length),
+              topVideo: [...videos].sort((a,b)=>b.ytViews-a.ytViews)[0],
+              count: videos.length
+            };
+          }
+        }
+      }
+      setYtData(results);
+      setYtLoading(false);
+    };
+    loadAll();
+  }, []);
+
   return (
     <div>
       <div style={{marginBottom:"28px"}}>
         <div style={{fontSize:"11px",color:"#555",letterSpacing:".15em",textTransform:"uppercase",marginBottom:"4px"}}>{today}</div>
         <h1 style={{fontSize:"28px",fontWeight:"900",color:"#fff",fontFamily:"'Playfair Display',serif",margin:"0 0 6px"}}>Weekly Snapshot</h1>
-        <div style={{fontSize:"13px",color:"#666"}}>All three shows · AI-powered recommendations</div>
+        <div style={{fontSize:"13px",color:"#666"}}>All three shows · AI-powered recommendations{ytLoading?" · loading YouTube data…":""}</div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px",marginBottom:"28px"}}>
         {shows.map(s=>{
@@ -596,6 +621,7 @@ function HomePage() {
                 {prior4avg>0&&<div style={{fontSize:"11px",fontWeight:"500",color:trend>=0?"#4CAF50":"#E8481C"}}>{trend>=0?"+":""}{trend}% vs prior</div>}
               </div>
               {recentCount>0&&<div style={{fontSize:"11px",color:"#666",marginBottom:"8px"}}>⚠ {recentCount} ep too recent for 7d comparison</div>}
+              {ytData[s.id]&&<div style={{fontSize:"11px",color:"#555",marginBottom:"8px"}}>{fmt(ytData[s.id].avgViews)} avg YT views · {ytData[s.id].count} recent eps</div>}
               <div style={{fontSize:"12px",color:"#ccc",lineHeight:"1.5",marginBottom:"4px"}}>{best?.title?.slice(0,55)}{(best?.title?.length||0)>55?"…":""}</div>
               <div style={{fontSize:"11px",color:"#555"}}>{fmt(best?.d7)} 7d · top episode</div>
             </div>
