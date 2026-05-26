@@ -172,25 +172,24 @@ Respond ONLY in JSON (no markdown):
 async function runGuestAnalysis(showName, seedEpisodes, ytVideos) {
   // Use YouTube videos for guest analysis since they have descriptions
   const hasYT = ytVideos && ytVideos.length > 0;
+  const ytAvg = hasYT ? Math.round(ytVideos.map(v=>v.ytViews).reduce((a,b)=>a+b,0)/ytVideos.length) : 0;
   const episodeList = hasYT
-    ? ytVideos.map(v=>`"${v.ytTitle}" — DESC: ${v.ytDescription.slice(0,200)}${v.guest?` — DETECTED GUEST: ${v.guest}`:""}`)
+    ? ytVideos.map(v=>`"${v.ytTitle}" — ${fmt(v.ytViews)} YT views — DESC: ${v.ytDescription.slice(0,150)}${v.guest?` — DETECTED GUEST: ${v.guest}`:""}`)
     : seedEpisodes.map(e=>`"${e.title}" — ${fmt(e.d7)} 7d downloads`);
+  const metric = hasYT ? "YouTube views" : "7-day downloads";
 
   const prompt = `You are analyzing podcast guest performance for ${showName}.
 
-${hasYT?"Live YouTube episode data with descriptions:":"Podcast episode data:"}
+${hasYT?`Live YouTube data (${ytVideos.length} episodes, avg ${fmt(ytAvg)} views):`:"Podcast episode data:"}
 ${episodeList.join("\n")}
 
-${hasYT?"":"Download data for context: "+seedEpisodes.map(e=>`"${e.title.slice(0,40)}": ${fmt(e.d7)} 7d`).join(", ")}
-
 Tasks:
-1. Identify ALL episodes featuring named guests (from descriptions, "speaks with", "joined by", "with [Name]" patterns, guest names in descriptions)
-2. List each guest episode with the guest name
-3. Compare guest vs solo episode performance where download data is available
-4. Identify most impactful guest types
+1. Identify ALL episodes featuring named guests (from "speaks with", "joined by", "ft.", guest names in descriptions/titles)
+2. Calculate avg ${metric} for guest vs solo episodes
+3. Rank guests by performance
 
 Respond ONLY in JSON (no markdown):
-{"guestEpisodes":[{"title":"<ep title>","guest":"<guest name>","d7":<downloads or 0>}],"soloAvg":<number or 0>,"guestAvg":<number or 0>,"delta":"<e.g. +23% vs baseline or N/A>","topGuests":["<name1>","<name2>"],"insight":"<1-2 sentence finding>"}`;
+{"guestEpisodes":[{"title":"<ep title>","guest":"<guest name>","views":<yt views or 0>,"d7":<downloads or 0>}],"soloAvg":<avg ${metric} non-guest>,"guestAvg":<avg ${metric} guest>,"delta":"<e.g. +23% vs baseline>","topGuests":["<name1>","<name2>"],"insight":"<1-2 sentence finding with numbers>","metric":"${metric}"}`;
 
   try {
     const raw = await callClaude(prompt, 800);
@@ -356,9 +355,9 @@ function InsightsPanel({show, seedEpisodes, ytVideos}) {
           <div style={{fontSize:"10px",color:"#444",marginBottom:"10px"}}>Guest ep avg uses spreadsheet download data. "—" = recent YouTube episode not yet in your downloads sheet.</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px",marginBottom:"12px"}}>
             {[
-              {label:"Guest ep avg",val:result.guestAvg>0?fmt(result.guestAvg):"—"},
-              {label:"Solo ep avg",val:result.soloAvg>0?fmt(result.soloAvg):"—"},
-              {label:"Guest delta",val:result.delta||"N/A",accent:result.delta?.includes("+")?"#4CAF50":result.delta?.includes("-")?"#E8481C":"#888"},
+              {label:`Guest ep avg ${result.metric==="YouTube views"?"(YT views)":"(7d DL)"}`,val:result.guestAvg>0?fmt(result.guestAvg):"—"},
+              {label:`Solo ep avg ${result.metric==="YouTube views"?"(YT views)":"(7d DL)"}`,val:result.soloAvg>0?fmt(result.soloAvg):"—"},
+              {label:"Guest vs solo",val:result.delta||"N/A",accent:result.delta?.includes("+")?"#4CAF50":result.delta?.includes("-")?"#E8481C":"#888"},
             ].map((m,i)=>(
               <div key={i} style={{background:"#141414",borderRadius:"2px",padding:"10px 12px"}}>
                 <div style={{fontSize:"10px",color:"#555",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"4px"}}>{m.label}</div>
@@ -367,11 +366,16 @@ function InsightsPanel({show, seedEpisodes, ytVideos}) {
             ))}
           </div>
           {result.insight&&<div style={{fontSize:"12px",color:"#888",lineHeight:"1.65",marginBottom:"10px",paddingLeft:"10px",borderLeft:`2px solid ${color}44`}}>{result.insight}</div>}
+          <div style={{display:"flex",gap:"8px",marginBottom:"6px",padding:"4px 0"}}>
+            <div style={{fontSize:"10px",color:"#555",flex:1}}>GUEST</div>
+            <div style={{fontSize:"10px",color:"#555",width:"180px"}}>EPISODE</div>
+            <div style={{fontSize:"10px",color:"#555",width:"80px",textAlign:"right"}}>{result.metric==="YouTube views"?"YT VIEWS":"7D DL"}</div>
+          </div>
           {result.guestEpisodes?.filter(e=>e.guest).slice(0,6).map((e,i)=>(
-            <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:"12px",padding:"5px 0",borderBottom:"1px solid #1a1a1a"}}>
-              <span style={{color:"#ccc",flex:1}}>{e.guest}</span>
-              <span style={{color:"#888",maxWidth:"200px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginRight:"10px"}}>{e.title?.slice(0,40)}</span>
-              <span style={{color:"#e0e0e0",whiteSpace:"nowrap"}}>{e.d7>0?fmt(e.d7)+" 7d":"—"}</span>
+            <div key={i} style={{display:"flex",alignItems:"center",gap:"8px",padding:"6px 0",borderBottom:"1px solid #1a1a1a"}}>
+              <span style={{color:"#ccc",flex:1,fontWeight:"500"}}>{e.guest}</span>
+              <span style={{color:"#555",width:"180px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:"11px"}}>{e.title?.slice(0,35)}</span>
+              <span style={{color:"#e0e0e0",width:"80px",textAlign:"right",whiteSpace:"nowrap"}}>{e.views>0?fmt(e.views):e.d7>0?fmt(e.d7):"—"}</span>
             </div>
           ))}
         </div>
@@ -379,13 +383,18 @@ function InsightsPanel({show, seedEpisodes, ytVideos}) {
       {result&&type==="topics"&&(
         <div>
           {result.insight&&<div style={{fontSize:"12px",color:"#888",lineHeight:"1.65",marginBottom:"12px",paddingLeft:"10px",borderLeft:`2px solid ${color}44`}}>{result.insight}</div>}
-          <div style={{fontSize:"10px",color:"#444",marginBottom:"10px"}}>% = vs show's own average {result.metric||"7-day downloads"}</div>
+          <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px",padding:"6px 10px",background:"#141414",borderRadius:"2px"}}>
+            <div style={{fontSize:"10px",color:"#555",flex:1}}>TOPIC</div>
+            <div style={{fontSize:"10px",color:"#555",width:"40px",textAlign:"center"}}>EPS</div>
+            <div style={{fontSize:"10px",color:"#555",width:"60px",textAlign:"right"}}>AVG {(result.metric||"7d DL").toUpperCase().replace("7-DAY DOWNLOADS","7D DL").replace("YOUTUBE VIEWS","YT VIEWS")}</div>
+            <div style={{fontSize:"10px",color:"#555",width:"60px",textAlign:"right"}}>VS AVG</div>
+          </div>
           {result.topicPerformance?.slice(0,6).map((t,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:"10px",padding:"6px 0",borderBottom:"1px solid #1a1a1a"}}>
+            <div key={i} style={{display:"flex",alignItems:"center",gap:"8px",padding:"6px 10px",borderBottom:"1px solid #1a1a1a"}}>
               <div style={{flex:1,fontSize:"12px",color:"#ccc"}}>{t.topic}</div>
-              <div style={{fontSize:"12px",color:"#888"}}>{t.episodeCount} eps</div>
-              <div style={{fontSize:"12px",color:"#e0e0e0",minWidth:"50px",textAlign:"right"}}>{fmt(t.avgD7)}</div>
-              <div style={{fontSize:"11px",fontWeight:"500",color:t.vsBaseline?.includes("+")?"#4CAF50":"#E8481C",minWidth:"50px",textAlign:"right"}}>{t.vsBaseline}</div>
+              <div style={{fontSize:"12px",color:"#888",width:"40px",textAlign:"center"}}>{t.episodeCount}</div>
+              <div style={{fontSize:"12px",color:"#e0e0e0",width:"60px",textAlign:"right"}}>{fmt(t.avgD7)}</div>
+              <div style={{fontSize:"11px",fontWeight:"500",color:t.vsBaseline?.includes("+")?"#4CAF50":"#E8481C",width:"60px",textAlign:"right"}}>{t.vsBaseline}</div>
             </div>
           ))}
         </div>
@@ -393,14 +402,19 @@ function InsightsPanel({show, seedEpisodes, ytVideos}) {
       {result&&type==="titles"&&(
         <div>
           {result.insight&&<div style={{fontSize:"12px",color:"#888",lineHeight:"1.65",marginBottom:"12px",paddingLeft:"10px",borderLeft:`2px solid ${color}44`}}>{result.insight}</div>}
-          <div style={{fontSize:"10px",color:"#444",marginBottom:"10px"}}>% = vs show's own average {result.metric||"7-day downloads"}</div>
+          <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px",padding:"6px 10px",background:"#141414",borderRadius:"2px"}}>
+            <div style={{fontSize:"10px",color:"#555",flex:1}}>TITLE PATTERN</div>
+            <div style={{fontSize:"10px",color:"#555",width:"80px",textAlign:"right"}}>AVG {(result.metric||"7d DL").toUpperCase().replace("7-DAY DOWNLOADS","7D DL").replace("YOUTUBE VIEWS","YT VIEWS")}</div>
+            <div style={{fontSize:"10px",color:"#555",width:"60px",textAlign:"right"}}>VS AVG</div>
+          </div>
           {result.patterns?.map((p,i)=>(
-            <div key={i} style={{marginBottom:"10px",paddingBottom:"10px",borderBottom:"1px solid #1a1a1a"}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:"4px"}}>
-                <span style={{fontSize:"12px",color:"#ccc",fontWeight:"500"}}>{p.pattern}</span>
-                <span style={{fontSize:"12px",color:p.vsBaseline?.includes("+")?"#4CAF50":"#E8481C",fontWeight:"500"}}>{p.vsBaseline}</span>
+            <div key={i} style={{marginBottom:"8px",paddingBottom:"8px",borderBottom:"1px solid #1a1a1a"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",padding:"0 10px"}}>
+                <span style={{fontSize:"12px",color:"#ccc",fontWeight:"500",flex:1}}>{p.pattern}</span>
+                <span style={{fontSize:"12px",color:"#888",width:"80px",textAlign:"right"}}>{fmt(p.avgD7)} · {p.count} eps</span>
+                <span style={{fontSize:"12px",color:p.vsBaseline?.includes("+")?"#4CAF50":"#E8481C",fontWeight:"500",width:"60px",textAlign:"right"}}>{p.vsBaseline}</span>
               </div>
-              <div style={{fontSize:"11px",color:"#555"}}>{p.count} eps · {fmt(p.avgD7)} avg{p.examples?.[0]?` · e.g. "${p.examples[0].slice(0,45)}"`:""}</div>
+              {p.examples?.[0]&&<div style={{fontSize:"10px",color:"#444",marginTop:"3px",padding:"0 10px"}}>e.g. "{p.examples[0].slice(0,55)}"</div>}
             </div>
           ))}
         </div>
