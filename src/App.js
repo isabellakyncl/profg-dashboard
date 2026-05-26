@@ -147,6 +147,90 @@ Respond ONLY in JSON (no markdown):
   } catch { return null; }
 }
 
+async function analyzeGuestPerformance(showName, episodes) {
+  const prompt = `You are analyzing podcast episode performance for ${showName}.
+
+Episode data:
+${episodes.map(e => `"${e.title}" — ${fmt(e.d7)} 7d downloads`).join('\n')}
+
+Tasks:
+1. Identify which episodes likely feature named guests (look for guest names, interview-style titles, "with [Name]" patterns)
+2. Calculate if guest episodes outperform or underperform solo/discussion episodes
+3. Identify the highest-performing guest types or names
+
+Respond ONLY in JSON (no markdown):
+{
+  "guestEpisodes": [{"title": "<episode title>", "guest": "<guest name or type>", "d7": <number>}],
+  "soloAvg": <average d7 of non-guest episodes>,
+  "guestAvg": <average d7 of guest episodes>,
+  "delta": "<e.g. +23% vs baseline>",
+  "topGuests": ["<name/type 1>", "<name/type 2>"],
+  "insight": "<1-2 sentence finding>"
+}`;
+  try {
+    const res = await fetch("/api/claude", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt, maxTokens: 700 }) });
+    const data = await res.json();
+    return JSON.parse(data.text.replace(/```json|```/g,"").trim());
+  } catch { return null; }
+}
+
+async function analyzeTopics(showName, episodes) {
+  const prompt = `You are analyzing podcast episode performance for ${showName}.
+
+Episode data:
+${episodes.map(e => `"${e.title}" — ${fmt(e.d7)} 7d downloads`).join('\n')}
+Show avg: ${fmt(showAvg(episodes, "d7"))} 7d downloads
+
+Tasks:
+1. Tag each episode with 1-3 topics (e.g. "AI", "Trump/tariffs", "Big Tech", "Markets", "Personal narrative", "Guest interview", etc.)
+2. Calculate average downloads by topic
+3. Rank topics by performance vs show baseline
+
+Respond ONLY in JSON (no markdown):
+{
+  "topicPerformance": [
+    {"topic": "<topic>", "avgD7": <number>, "episodeCount": <number>, "vsBseline": "<e.g. +18%>"}
+  ],
+  "topTopic": "<best performing topic>",
+  "weakTopic": "<worst performing topic>",
+  "insight": "<1-2 sentence finding with specific numbers>"
+}`;
+  try {
+    const res = await fetch("/api/claude", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt, maxTokens: 700 }) });
+    const data = await res.json();
+    return JSON.parse(data.text.replace(/```json|```/g,"").trim());
+  } catch { return null; }
+}
+
+async function analyzeTitlePatterns(showName, episodes) {
+  const prompt = `You are analyzing podcast title patterns for ${showName}.
+
+Episode data (title + performance):
+${episodes.map(e => `"${e.title}" — ${fmt(e.d7)} 7d`).join('\n')}
+Show avg: ${fmt(showAvg(episodes, "d7"))} 7d
+
+Analyze title patterns:
+1. Questions vs statements (titles ending in "?")
+2. Titles with numbers
+3. Titles with guest names
+4. Title length (short <6 words vs long)
+5. Titles with "&" or "+" (multiple topics)
+
+Respond ONLY in JSON (no markdown):
+{
+  "patterns": [
+    {"pattern": "<pattern name>", "avgD7": <number>, "count": <number>, "vsBaseline": "<e.g. +12%>", "examples": ["<title 1>", "<title 2>"]}
+  ],
+  "bestPattern": "<winning pattern>",
+  "insight": "<1-2 sentence actionable finding>"
+}`;
+  try {
+    const res = await fetch("/api/claude", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ prompt, maxTokens: 700 }) });
+    const data = await res.json();
+    return JSON.parse(data.text.replace(/```json|```/g,"").trim());
+  } catch { return null; }
+}
+
 async function analyzeSentiment(episode, showName) {
   const prompt = `Podcast episode analysis for ${showName}: "${episode.title}"
 Stats: ${fmt(episode.d7)} 7-day downloads${episode.ytViews ? `, ${fmt(episode.ytViews)} YT views, ${engRate(episode)}% engagement` : ""}
@@ -227,6 +311,96 @@ function SentimentBtn({episode,showName,color}) {
           <button onClick={()=>setOpen(false)} style={{marginTop:"8px",background:"transparent",border:"none",color:"#444",fontSize:"11px",cursor:"pointer",fontFamily:"'DM Mono',monospace"}}>close ↑</button>
         </div>
       )}
+    </div>
+  );
+}
+
+
+function InsightsPanel({show}) {
+  const {name, color, data} = show;
+  const mature = matureEpisodes(data);
+  const [guests, setGuests] = useState(null);
+  const [topics, setTopics] = useState(null);
+  const [titles, setTitles] = useState(null);
+  const [loading, setLoading] = useState({guests:false, topics:false, titles:false});
+
+  const load = async (type) => {
+    setLoading(prev => ({...prev, [type]:true}));
+    if (type === "guests") { const r = await analyzeGuestPerformance(name, mature); setGuests(r); }
+    if (type === "topics") { const r = await analyzeTopics(name, mature); setTopics(r); }
+    if (type === "titles") { const r = await analyzeTitlePatterns(name, mature); setTitles(r); }
+    setLoading(prev => ({...prev, [type]:false}));
+  };
+
+  const AIBlock = ({title, dataKey, result, loadKey}) => (
+    <div style={{background:"#0D0D0D",border:"1px solid #222",borderRadius:"2px",padding:"16px 18px",marginBottom:"10px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}}>
+        <div style={{fontSize:"11px",color:color,letterSpacing:".1em",textTransform:"uppercase",fontWeight:"500"}}>{title}</div>
+        <button onClick={()=>load(loadKey)} disabled={loading[loadKey]} style={{background:"transparent",border:`1px solid ${color}44`,color:color,padding:"4px 12px",fontSize:"11px",cursor:"pointer",fontFamily:"'DM Mono',monospace",borderRadius:"2px",opacity:loading[loadKey]?0.5:1}}>
+          {loading[loadKey]?"Analyzing…":result?"Refresh":"Run Analysis"}
+        </button>
+      </div>
+      {!result && !loading[loadKey] && <div style={{fontSize:"12px",color:"#444",fontStyle:"italic"}}>Click "Run Analysis" to generate insights from your episode data.</div>}
+      {loading[loadKey] && <div style={{fontSize:"12px",color:"#555"}}>Analyzing {mature.length} episodes…</div>}
+      {result && loadKey === "guests" && (
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px",marginBottom:"12px"}}>
+            {[
+              {label:"Guest ep avg", val:fmt(result.guestAvg)},
+              {label:"Solo ep avg", val:fmt(result.soloAvg)},
+              {label:"Guest delta", val:result.delta, accent:result.delta?.includes("+")?"#4CAF50":"#E8481C"},
+            ].map((m,i)=>(
+              <div key={i} style={{background:"#141414",borderRadius:"2px",padding:"10px 12px"}}>
+                <div style={{fontSize:"10px",color:"#555",textTransform:"uppercase",letterSpacing:".08em",marginBottom:"4px"}}>{m.label}</div>
+                <div style={{fontSize:"16px",fontWeight:"500",color:m.accent||"#fff",fontFamily:"'Playfair Display',serif"}}>{m.val}</div>
+              </div>
+            ))}
+          </div>
+          {result.insight && <div style={{fontSize:"12px",color:"#888",lineHeight:"1.65",marginBottom:"10px",paddingLeft:"10px",borderLeft:`2px solid ${color}44`}}>{result.insight}</div>}
+          {result.guestEpisodes?.slice(0,4).map((e,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:"12px",padding:"5px 0",borderBottom:"1px solid #1a1a1a"}}>
+              <span style={{color:"#888"}}>{e.guest}</span>
+              <span style={{color:"#ccc"}}>{fmt(e.d7)} 7d</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {result && loadKey === "topics" && (
+        <div>
+          {result.insight && <div style={{fontSize:"12px",color:"#888",lineHeight:"1.65",marginBottom:"12px",paddingLeft:"10px",borderLeft:`2px solid ${color}44`}}>{result.insight}</div>}
+          {result.topicPerformance?.slice(0,6).map((t,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:"10px",padding:"6px 0",borderBottom:"1px solid #1a1a1a"}}>
+              <div style={{flex:1,fontSize:"12px",color:"#ccc"}}>{t.topic}</div>
+              <div style={{fontSize:"12px",color:"#888"}}>{t.episodeCount} eps</div>
+              <div style={{fontSize:"12px",color:"#e0e0e0",minWidth:"50px",textAlign:"right"}}>{fmt(t.avgD7)}</div>
+              <div style={{fontSize:"11px",fontWeight:"500",color:t.vsBaseline?.includes("+")?"#4CAF50":"#E8481C",minWidth:"48px",textAlign:"right"}}>{t.vsBaseline}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {result && loadKey === "titles" && (
+        <div>
+          {result.insight && <div style={{fontSize:"12px",color:"#888",lineHeight:"1.65",marginBottom:"12px",paddingLeft:"10px",borderLeft:`2px solid ${color}44`}}>{result.insight}</div>}
+          {result.patterns?.map((p,i)=>(
+            <div key={i} style={{marginBottom:"10px",paddingBottom:"10px",borderBottom:"1px solid #1a1a1a"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:"4px"}}>
+                <span style={{fontSize:"12px",color:"#ccc",fontWeight:"500"}}>{p.pattern}</span>
+                <span style={{fontSize:"12px",color:p.vsBaseline?.includes("+")?"#4CAF50":"#E8481C",fontWeight:"500"}}>{p.vsBaseline}</span>
+              </div>
+              <div style={{fontSize:"11px",color:"#555"}}>{p.count} episodes · {fmt(p.avgD7)} avg · e.g. "{p.examples?.[0]?.slice(0,50)}"</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{marginTop:"20px"}}>
+      <div style={{fontSize:"11px",color:"#555",letterSpacing:".12em",textTransform:"uppercase",marginBottom:"12px"}}>Deep Insights</div>
+      <AIBlock title="Guest Performance" loadKey="guests" result={guests}/>
+      <AIBlock title="Topic Performance Index" loadKey="topics" result={topics}/>
+      <AIBlock title="Title Pattern Analysis" loadKey="titles" result={titles}/>
     </div>
   );
 }
@@ -320,6 +494,7 @@ function ShowPage({show}) {
         </div>
       </div>
     </div>
+    <InsightsPanel show={show}/>
   );
 }
 
