@@ -335,10 +335,12 @@ function InsightsPanel({show, episodes, ytRaw}) {
   const [topics, setTopics] = useState(null);
   const [titles, setTitles] = useState(null);
   const [loading, setLoading] = useState({guests:false, topics:false, titles:false});
+  const ytRawRef = { current: ytRaw };
 
   const load = async (type) => {
     setLoading(prev => ({...prev, [type]:true}));
-    if (type === "guests") { const r = await analyzeGuestPerformance(name, mature, ytRaw); setGuests(r); }
+    const freshYtRaw = ytRawRef.current;
+    if (type === "guests") { const r = await analyzeGuestPerformance(name, mature, freshYtRaw); setGuests(r); }
     if (type === "topics") { const r = await analyzeTopics(name, mature); setTopics(r); }
     if (type === "titles") { const r = await analyzeTitlePatterns(name, mature); setTitles(r); }
     setLoading(prev => ({...prev, [type]:false}));
