@@ -637,44 +637,108 @@ function HomePage() {
 // ── Trends Page ───────────────────────────────────────────────────────────────
 function TrendsPage() {
   const shows = Object.values(SHOWS);
+  const [activeShow, setActiveShow] = useState("pgm");
+  const show = SHOWS[activeShow];
+
+  // Build monthly data
+  const months = {};
+  show.data.forEach(e => {
+    const p = e.date.split("/");
+    const yr = p[2]||"2025";
+    const k = `${yr}-${p[0].padStart(2,"0")}`;
+    if (!months[k]) months[k] = [];
+    if (e.d7) months[k].push({d7: e.d7, title: e.title});
+  });
+  const monthKeys = Object.keys(months).sort();
+  const monthAvgs = monthKeys.map(k => ({
+    key: k,
+    avg: Math.round(months[k].map(e=>e.d7).reduce((a,b)=>a+b,0)/months[k].length),
+    count: months[k].length,
+    top: [...months[k]].sort((a,b)=>b.d7-a.d7)[0]
+  }));
+  const maxAvg = Math.max(...monthAvgs.map(m=>m.avg));
+  const overallAvg = Math.round(monthAvgs.map(m=>m.avg).reduce((a,b)=>a+b,0)/monthAvgs.length);
+
+  // Top 10 all time
+  const top10 = [...show.data].sort((a,b)=>(b.d7||0)-(a.d7||0)).slice(0,10);
+
   return (
     <div>
-      <h2 style={{fontSize:"22px",fontWeight:"700",color:"#fff",fontFamily:"'Playfair Display',serif",marginBottom:"6px"}}>Historical Trends</h2>
-      <div style={{fontSize:"13px",color:"#555",marginBottom:"24px"}}>Avg 7-day downloads by month</div>
-      {shows.map(s=>{
-        const months={};
-        s.data.forEach(e=>{
-          const p=e.date.split("/");
-          const yr=(p[2]||"2025").slice(-2);
-          const k=`${yr}-${p[0].padStart(2,"0")}`;
-          if(!months[k])months[k]=[];
-          if(e.d7)months[k].push(e.d7);
-        });
-        const keys=Object.keys(months).sort();
-        if(!keys.length) return null;
-        const maxVal=Math.max(...keys.map(k=>Math.round(months[k].reduce((a,b)=>a+b,0)/months[k].length)));
-        return (
-          <div key={s.id} style={{background:"#141414",border:"1px solid #222",borderRadius:"2px",padding:"20px 24px",marginBottom:"14px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"20px"}}>
-              <div style={{width:"3px",height:"18px",background:s.color,borderRadius:"1px"}}/>
-              <span style={{fontSize:"13px",color:s.color}}>{s.name}</span>
-            </div>
-            <div style={{display:"flex",alignItems:"flex-end",gap:"6px",height:"80px"}}>
-              {keys.map(k=>{
-                const avg=Math.round(months[k].reduce((a,b)=>a+b,0)/months[k].length);
-                const h=Math.round((avg/maxVal)*80);
-                return (
-                  <div key={k} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:"4px"}}>
-                    <div style={{fontSize:"9px",color:"#555"}}>{fmt(avg)}</div>
-                    <div style={{width:"100%",height:`${h}px`,background:s.color,opacity:.7,borderRadius:"2px 2px 0 0"}}/>
-                    <div style={{fontSize:"9px",color:"#444",transform:"rotate(-45deg)",transformOrigin:"center",marginTop:"4px",whiteSpace:"nowrap"}}>{k.split("-")[1]+"/"+k.split("-")[0]}</div>
-                  </div>
-                );
-              })}
-            </div>
+      <div style={{marginBottom:"24px"}}>
+        <h2 style={{fontSize:"22px",fontWeight:"700",color:"#fff",fontFamily:"'Playfair Display',serif",marginBottom:"6px"}}>Trends</h2>
+        <div style={{fontSize:"13px",color:"#555"}}>Historical performance by show</div>
+      </div>
+
+      <div style={{display:"flex",gap:"8px",marginBottom:"24px"}}>
+        {shows.map(s=>(
+          <button key={s.id} onClick={()=>setActiveShow(s.id)} style={{background:activeShow===s.id?s.color:"transparent",border:`1px solid ${activeShow===s.id?s.color:"#333"}`,color:activeShow===s.id?"#fff":s.color,padding:"6px 16px",fontSize:"12px",cursor:"pointer",fontFamily:"'DM Mono',monospace",borderRadius:"2px",letterSpacing:".04em"}}>
+            {s.name}
+          </button>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px",marginBottom:"20px"}}>
+        {[
+          {label:"Overall avg 7d", val:fmt(overallAvg), sub:"across all episodes"},
+          {label:"Best month", val:fmt(Math.max(...monthAvgs.map(m=>m.avg))), sub:monthAvgs.find(m=>m.avg===maxAvg)?.key.split("-").reverse().join("/")},
+          {label:"Total episodes", val:show.data.length, sub:"in dataset"},
+        ].map((m,i)=>(
+          <div key={i} style={{background:"#141414",border:"1px solid #222",borderRadius:"2px",padding:"16px 18px"}}>
+            <div style={{fontSize:"11px",color:"#555",letterSpacing:".1em",textTransform:"uppercase",marginBottom:"8px"}}>{m.label}</div>
+            <div style={{fontSize:"22px",fontWeight:"500",color:show.color,fontFamily:"'Playfair Display',serif"}}>{m.val}</div>
+            <div style={{fontSize:"11px",color:"#555",marginTop:"4px"}}>{m.sub}</div>
           </div>
-        );
-      })}
+        ))}
+      </div>
+
+      <div style={{background:"#141414",border:"1px solid #222",borderRadius:"2px",padding:"20px 24px",marginBottom:"14px"}}>
+        <div style={{fontSize:"11px",color:"#555",letterSpacing:".12em",textTransform:"uppercase",marginBottom:"16px"}}>Monthly avg 7-day downloads</div>
+        <div style={{display:"flex",alignItems:"flex-end",gap:"4px",height:"120px",marginBottom:"8px"}}>
+          {monthAvgs.map((m,i)=>{
+            const h = Math.round((m.avg/maxAvg)*120);
+            const isRecent = i >= monthAvgs.length - 3;
+            return (
+              <div key={m.key} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:"3px",minWidth:0}} title={`${m.key}: ${fmt(m.avg)} avg (${m.count} eps)`}>
+                <div style={{fontSize:"8px",color:isRecent?show.color:"#444",whiteSpace:"nowrap"}}>{fmt(m.avg)}</div>
+                <div style={{width:"100%",height:`${h}px`,background:show.color,opacity:isRecent?1:.5,borderRadius:"2px 2px 0 0",transition:"opacity .2s"}}/>
+                <div style={{fontSize:"8px",color:"#333",transform:"rotate(-45deg)",transformOrigin:"center",marginTop:"4px",whiteSpace:"nowrap"}}>{m.key.split("-")[1]+"/"+m.key.split("-")[0].slice(-2)}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{fontSize:"10px",color:"#333",textAlign:"right"}}>brighter bars = last 3 months</div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px"}}>
+        <div style={{background:"#141414",border:"1px solid #222",borderRadius:"2px",padding:"20px 22px"}}>
+          <div style={{fontSize:"11px",color:"#555",letterSpacing:".12em",textTransform:"uppercase",marginBottom:"14px"}}>All-time top 10 episodes</div>
+          {top10.map((ep,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:"10px",padding:"7px 0",borderBottom:"1px solid #1a1a1a"}}>
+              <div style={{fontSize:"12px",color:show.color,minWidth:"20px",fontWeight:"500"}}>#{i+1}</div>
+              <div style={{flex:1,fontSize:"12px",color:"#ccc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ep.title}</div>
+              <div style={{fontSize:"12px",color:"#e0e0e0",whiteSpace:"nowrap",fontWeight:"500"}}>{fmt(ep.d7)}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{background:"#141414",border:"1px solid #222",borderRadius:"2px",padding:"20px 22px"}}>
+          <div style={{fontSize:"11px",color:"#555",letterSpacing:".12em",textTransform:"uppercase",marginBottom:"14px"}}>Month by month</div>
+          <div style={{maxHeight:"380px",overflowY:"auto"}}>
+            {[...monthAvgs].reverse().map((m,i)=>{
+              const prev = monthAvgs[monthAvgs.length - i - 2];
+              const delta = prev ? Math.round(((m.avg-prev.avg)/prev.avg)*100) : null;
+              return (
+                <div key={m.key} style={{display:"flex",alignItems:"center",gap:"8px",padding:"7px 0",borderBottom:"1px solid #1a1a1a"}}>
+                  <div style={{fontSize:"12px",color:"#555",minWidth:"50px"}}>{m.key.split("-")[1]+"/"+m.key.split("-")[0].slice(-2)}</div>
+                  <div style={{flex:1,fontSize:"12px",color:"#e0e0e0",fontWeight:"500"}}>{fmt(m.avg)}</div>
+                  <div style={{fontSize:"11px",color:"#555"}}>{m.count} eps</div>
+                  {delta!==null&&<div style={{fontSize:"11px",fontWeight:"500",color:delta>=0?"#4CAF50":"#E8481C",minWidth:"45px",textAlign:"right"}}>{delta>=0?"+":""}{delta}%</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
