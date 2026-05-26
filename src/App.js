@@ -47,7 +47,7 @@ const SEED_RM = [
 const SHOWS = {
   pgm: {id:"pgm", name:"Prof G Markets", color:"#E8481C", data:SEED_PGM, channelId:PGM_CHANNEL_ID},
   pgp: {id:"pgp", name:"Prof G Pod", color:"#ffffff", data:SEED_PGP, channelId:"UC1E1SVcVyU3ntWMSQEp38Yw"},
-  rm:  {id:"rm",  name:"Raging Moderates", color:"#4A6FA5", data:SEED_RM, channelId:""},
+  rm:  {id:"rm",  name:"Raging Moderates", color:"#4A6FA5", data:SEED_RM, channelId:"UCcvDWzvxz6Kn1iPQHMl2teA"},
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
