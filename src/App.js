@@ -156,8 +156,9 @@ Respond ONLY in JSON (no markdown):
   } catch { return null; }
 }
 
-async function analyzeGuestPerformance(showName, episodes) {
+async function analyzeGuestPerformance(showName, episodes, ytRaw) {
   const withGuests = episodes.filter(e => e.guest || e.ytDescription);
+  const ytEntries = Object.entries(ytRaw || {}).slice(0, 20);
   const prompt = `You are analyzing podcast episode performance for ${showName}.
 
 Episode data (title, downloads, guest if known, YT description excerpt):
@@ -326,7 +327,7 @@ function SentimentBtn({episode,showName,color}) {
 }
 
 
-function InsightsPanel({show, episodes}) {
+function InsightsPanel({show, episodes, ytRaw}) {
   const {name, color} = show;
   const liveData = episodes && episodes.length > 0 ? episodes : show.data;
   const mature = matureEpisodes(liveData);
@@ -337,7 +338,7 @@ function InsightsPanel({show, episodes}) {
 
   const load = async (type) => {
     setLoading(prev => ({...prev, [type]:true}));
-    if (type === "guests") { const r = await analyzeGuestPerformance(name, mature); setGuests(r); }
+    if (type === "guests") { const r = await analyzeGuestPerformance(name, mature, ytRaw); setGuests(r); }
     if (type === "topics") { const r = await analyzeTopics(name, mature); setTopics(r); }
     if (type === "titles") { const r = await analyzeTitlePatterns(name, mature); setTitles(r); }
     setLoading(prev => ({...prev, [type]:false}));
@@ -419,6 +420,7 @@ function InsightsPanel({show, episodes}) {
 function ShowPage({show}) {
   const {name,color,data,channelSearch}=show;
   const [episodes,setEpisodes]=useState(data);
+  const [ytRaw,setYtRaw]=useState({});
   const [ytLoading,setYtLoading]=useState(false);
   const [ytLoaded,setYtLoaded]=useState(false);
   const [sort,setSort]=useState("d7");
@@ -452,6 +454,7 @@ function ShowPage({show}) {
         }));
       setEpisodes([...updated, ...ytOnlyEps]);
     }
+    setYtRaw(stats);
     setYtLoaded(true);
     setYtLoading(false);
   };
@@ -526,7 +529,7 @@ function ShowPage({show}) {
           </table>
         </div>
       </div>
-    <InsightsPanel show={show} episodes={episodes}/>
+    <InsightsPanel show={show} episodes={episodes} ytRaw={ytRaw}/>
     </div>
   );
 }
