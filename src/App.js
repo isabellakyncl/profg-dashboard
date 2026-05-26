@@ -493,8 +493,8 @@ function ShowPage({show}) {
           </table>
         </div>
       </div>
-    </div>
     <InsightsPanel show={show}/>
+    </div>
   );
 }
 
