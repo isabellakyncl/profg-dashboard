@@ -511,7 +511,8 @@ async function callClaude(prompt, maxTokens=800) {
 async function generateTakeaways(showName, episodes) {
   // Only use last 8 mature episodes (approx 4-8 weeks) for recency
   const allMature = matureEps(episodes);
-  const mature = [...allMature].sort((a,b) => episodeAgeDays(a.date) - episodeAgeDays(b.date)).slice(-8);
+  // Sort by age ascending (oldest first), take last 8 = most recent 8
+  const mature = [...allMature].sort((a,b) => episodeAgeDays(b.date) - episodeAgeDays(a.date)).slice(0,8);
   const sorted = [...mature].sort((a,b)=>episodeAgeDays(a.date)-episodeAgeDays(b.date));
   const last4 = sorted.slice(-4);
   const prior4 = sorted.slice(-8,-4);
