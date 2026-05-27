@@ -519,6 +519,7 @@ async function generateTakeaways(showName, episodes) {
   const last4avg = last4.length ? Math.round(last4.map(e=>e.d7||0).reduce((a,b)=>a+b,0)/last4.length) : 0;
   const prior4avg = prior4.length ? Math.round(prior4.map(e=>e.d7||0).reduce((a,b)=>a+b,0)/prior4.length) : 0;
   const trend = prior4avg ? Math.round(((last4avg-prior4avg)/prior4avg)*100) : 0;
+  const metric = hasYT ? "YouTube views" : "7-day downloads";
   const top3 = [...mature].sort((a,b)=>(b.d7||0)-(a.d7||0)).slice(0,3);
   const bottom3 = [...mature].sort((a,b)=>(a.d7||0)-(b.d7||0)).slice(0,3);
   const recent = episodes.filter(e=>episodeAgeDays(e.date)<7);
@@ -654,9 +655,9 @@ function LoginScreen({onLogin}) {
 }
 
 // ── Takeaway Block ────────────────────────────────────────────────────────────
-function TakeawayBlock({showName, episodes, color}) {
+function TakeawayBlock({showName, episodes, color, ytVideos}) {
   const [data,setData]=useState(null); const [loading,setLoading]=useState(false);
-  const load=async()=>{setLoading(true);const r=await generateTakeaways(showName,episodes);setData(r);setLoading(false);};
+  const load=async()=>{setLoading(true);const r=await generateTakeaways(showName,episodes,ytVideos||[]);setData(r);setLoading(false);};
   return (
     <div style={{background:"#141414",border:`1px solid ${color}33`,borderRadius:"2px",padding:"20px 24px",marginBottom:"12px"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"14px"}}>
@@ -891,7 +892,7 @@ function ShowPage({show}) {
         ))}
       </div>
 
-      <TakeawayBlock showName={name} episodes={episodes} color={color}/>
+      <TakeawayBlock showName={name} episodes={episodes} color={color} ytVideos={ytVideos}/>
 
       <div style={{background:"#141414",border:"1px solid #222",borderRadius:"2px",padding:"20px 22px",marginBottom:"0"}}>
         <div style={{display:"flex",gap:"8px",marginBottom:"16px",flexWrap:"wrap"}}>
