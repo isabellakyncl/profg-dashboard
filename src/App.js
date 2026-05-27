@@ -969,16 +969,19 @@ function HomePage() {
   const shows = Object.values(SHOWS);
   const today = new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
   const [ytData, setYtData] = useState({});
+  const [ytVideosMap, setYtVideosMap] = useState({});
   const [ytLoading, setYtLoading] = useState(false);
 
   useEffect(() => {
     const loadAll = async () => {
       setYtLoading(true);
       const results = {};
+      const videosMap = {};
       for (const show of shows) {
         if (show.channelId) {
           const videos = await fetchYouTubeData(show.channelId);
           if (videos.length > 0) {
+            videosMap[show.id] = videos;
             results[show.id] = {
               avgViews: Math.round(videos.map(v=>v.ytViews).reduce((a,b)=>a+b,0)/videos.length),
               topVideo: [...videos].sort((a,b)=>b.ytViews-a.ytViews)[0],
@@ -988,6 +991,7 @@ function HomePage() {
         }
       }
       setYtData(results);
+      setYtVideosMap(videosMap);
       setYtLoading(false);
     };
     loadAll();
@@ -1030,7 +1034,7 @@ function HomePage() {
         })}
       </div>
       <div style={{fontSize:"11px",color:"#555",letterSpacing:".12em",textTransform:"uppercase",marginBottom:"14px"}}>AI Recommendations</div>
-      {shows.map(s=><TakeawayBlock key={s.id} showName={s.name} episodes={s.data} color={s.color}/>)}
+      {shows.map(s=><TakeawayBlock key={s.id} showName={s.name} episodes={s.data} color={s.color} ytVideos={ytVideosMap[s.id]||[]}/>)}
     </div>
   );
 }
