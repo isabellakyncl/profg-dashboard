@@ -518,21 +518,40 @@ function Trends() {
           </div>
         ))}
       </div>
-      {mavgs.length>0&&(
+      {eps.length>1&&(
         <div style={{...card,marginBottom:"14px"}}>
-          <div style={label}>Monthly avg views</div>
-          <div style={{display:"flex",alignItems:"flex-end",gap:"4px",height:"120px",marginBottom:"8px"}}>
-            {mavgs.map((m,i)=>{
-              const h=Math.round((m.avg/maxAvg)*120); const isRecent=i>=mavgs.length-3;
-              return (
-                <div key={m.key} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:"3px",minWidth:0}}>
-                  <div style={{fontSize:"9px",color:isRecent?show.color:B.textMute,whiteSpace:"nowrap",fontFamily:B.font}}>{fmt(m.avg)}</div>
-                  <div style={{width:"100%",height:`${h}px`,background:show.color,opacity:isRecent?1:.4,borderRadius:"2px 2px 0 0"}}/>
-                  <div style={{fontSize:"9px",color:B.textMute,transform:"rotate(-45deg)",transformOrigin:"center",marginTop:"4px",whiteSpace:"nowrap",fontFamily:B.font}}>{m.key.split("-")[1]+"/"+m.key.split("-")[0].slice(-2)}</div>
+          <div style={{...label,marginBottom:"16px"}}>Episode performance trend (last {Math.min(eps.length,50)} episodes, oldest to newest)</div>
+          {(()=>{
+            const chartEps=[...eps].sort((a,b)=>new Date(a.date||0)-new Date(b.date||0)).slice(-50);
+            const maxV=Math.max(...chartEps.map(e=>e.views||0));
+            const minV=Math.min(...chartEps.map(e=>e.views||0));
+            const range=maxV-minV||1;
+            const H=120;
+            const points=chartEps.map((e,i)=>{
+              const x=(i/(chartEps.length-1))*100;
+              const y=H-Math.round(((e.views||0)-minV)/range*(H-10))-5;
+              return {x,y,e};
+            });
+            return (
+              <div style={{position:"relative",height:`${H+30}px`,width:"100%"}}>
+                <svg width="100%" height={H} style={{overflow:"visible"}}>
+                  <polyline
+                    points={points.map(p=>`${p.x}%,${p.y}`).join(" ")}
+                    fill="none" stroke={show.color} strokeWidth="2" strokeLinejoin="round"/>
+                  {points.map((p,i)=>(
+                    <circle key={i} cx={`${p.x}%`} cy={p.y} r="3" fill={show.color} opacity="0.7">
+                      <title>{p.e.title} — {fmt(p.e.views)} views ({p.e.date?.slice(0,10)})</title>
+                    </circle>
+                  ))}
+                </svg>
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:"6px"}}>
+                  <div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font}}>{chartEps[0]?.date?.slice(0,10)}</div>
+                  <div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font,textAlign:"center"}}>{fmt(minV)} — {fmt(maxV)} views range</div>
+                  <div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font}}>{chartEps[chartEps.length-1]?.date?.slice(0,10)}</div>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })()}
         </div>
       )}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px"}}>
