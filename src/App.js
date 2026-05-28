@@ -6,7 +6,7 @@ const SHEET_ID = "18P2XCl0oi2_B-xpb3SgW2qUopbv-Vbzqp4sB9v7Zsn8";
 
 const CHANNELS = {
   pgm: { id:"pgm", name:"Prof G Markets",   color:"#de6f3f", channelId:"UCp4CBeq4nzeg9smAvdjPrig" },
-  pgp: { id:"pgp", name:"Prof G Pod",       color:"#00222d", channelId:"UC1E1SVcVyU3ntWMSQEp38Yw" },
+  pgp: { id:"pgp", name:"Prof G Pod",       color:"#ffffff", channelId:"UC1E1SVcVyU3ntWMSQEp38Yw" },
   rm:  { id:"rm",  name:"Raging Moderates", color:"#d987b5", channelId:"UCcvDWzvxz6Kn1iPQHMl2teA" },
 };
 
@@ -201,7 +201,7 @@ function Login({onLogin}) {
   const [pw,setPw]=useState(""); const [err,setErr]=useState(false); const [shake,setShake]=useState(false);
   const go=()=>{if(pw===PASSWORD)onLogin();else{setErr(true);setShake(true);setTimeout(()=>setShake(false),500);}};
   return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#ffffff",fontFamily:"'Barlow',sans-serif"}}>
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#00222d",fontFamily:"'Barlow',sans-serif"}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,700;0,900;1,700;1,900&family=Barlow+Condensed:ital,wght@0,400;0,700;0,900;1,700;1,900&display=swap');
         .lb{background:#141414;border:1px solid #2a2a2a;border-radius:2px;padding:48px;width:360px;text-align:center;}
         .li{width:100%;background:#0D0D0D;border:1px solid #2a2a2a;color:#fff;padding:12px 16px;font-family:'Barlow',sans-serif;font-size:14px;border-radius:2px;outline:none;box-sizing:border-box;}
@@ -244,7 +244,7 @@ function TakeawayBlock({showName, color, ytVideos, fallback}) {
       {loading&&<div style={{fontSize:"14px",color:"#aaaaaa"}}>Analyzing most recent episodes…</div>}
       {data?.takeaways?.map((t,i)=>(
         <div key={i} style={{marginBottom:"12px",paddingLeft:"12px",borderLeft:`2px solid ${color}44`}}>
-          <div style={{fontSize:"14px",fontWeight:"500",color:"#00222d",marginBottom:"3px"}}>→ {t.title}</div>
+          <div style={{fontSize:"14px",fontWeight:"500",color:"#ffffff",marginBottom:"3px"}}>→ {t.title}</div>
           <div style={{fontSize:"14px",color:"#666666",lineHeight:"1.6"}}>{t.detail}</div>
         </div>
       ))}
@@ -262,7 +262,7 @@ function Sentiment({title, showName, views, color}) {
         {l?"…":s?`${s.score}/10`:"Analyze"}
       </button>
       {open&&s&&(
-        <div style={{marginTop:"8px",background:"#ffffff",border:"1px solid #222",borderRadius:"2px",padding:"12px 14px"}}>
+        <div style={{marginTop:"8px",background:"#00222d",border:"1px solid #222",borderRadius:"2px",padding:"12px 14px"}}>
           <div style={{fontSize:"18px",fontWeight:"700",color,marginBottom:"6px",fontFamily:"'Barlow',sans-serif"}}>{s.score}/10</div>
           <div style={{fontSize:"14px",color:"#666666",lineHeight:"1.65",marginBottom:"10px"}}>{s.summary}</div>
           {s.consensus?.map((c,i)=><div key={i} style={{fontSize:"14px",color:"#444444",marginBottom:"5px",paddingLeft:"10px",borderLeft:`2px solid ${color}55`}}>"{c}"</div>)}
@@ -290,7 +290,7 @@ function Insights({show, ytVideos}) {
   };
 
   const Block=({title,type,result})=>(
-    <div style={{background:"#ffffff",border:"1px solid #222",borderRadius:"2px",padding:"16px 18px",marginBottom:"10px"}}>
+    <div style={{background:"#00222d",border:"1px solid #222",borderRadius:"2px",padding:"16px 18px",marginBottom:"10px"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"12px"}}>
         <span style={{fontSize:"14px",color,letterSpacing:".1em",textTransform:"uppercase",fontWeight:"500"}}>{title}</span>
         <button onClick={()=>run(type)} disabled={loading[type]} style={{background:"transparent",border:`1px solid ${color}44`,color,padding:"4px 12px",fontSize:"14px",cursor:"pointer",fontFamily:"'Barlow',sans-serif",borderRadius:"2px",opacity:loading[type]?0.5:1}}>
@@ -324,7 +324,7 @@ function Insights({show, ytVideos}) {
             <div key={i} style={{display:"flex",alignItems:"center",gap:"8px",padding:"6px 0",borderBottom:"1px solid #1a1a1a"}}>
               <span style={{flex:1,fontSize:"14px",color:"#1a1a1a",fontWeight:"500"}}>{e.guest}</span>
               <span style={{width:"200px",fontSize:"14px",color:"#aaaaaa",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.title?.slice(0,35)}</span>
-              <span style={{width:"70px",fontSize:"14px",color:"#00222d",textAlign:"right"}}>{e.views>0?fmt(e.views):"—"}</span>
+              <span style={{width:"70px",fontSize:"14px",color:"#ffffff",textAlign:"right"}}>{e.views>0?fmt(e.views):"—"}</span>
             </div>
           ))}
         </div>
@@ -343,7 +343,7 @@ function Insights({show, ytVideos}) {
             <div key={i} style={{display:"flex",alignItems:"center",gap:"8px",padding:"6px 10px",borderBottom:"1px solid #1a1a1a"}}>
               <div style={{flex:1,fontSize:"14px",color:"#1a1a1a"}}>{t.topic}</div>
               <div style={{width:"40px",fontSize:"14px",color:"#666666",textAlign:"center"}}>{t.count}</div>
-              <div style={{width:"65px",fontSize:"14px",color:"#00222d",textAlign:"right"}}>{fmt(t.avgViews||t.avgD7)}</div>
+              <div style={{width:"65px",fontSize:"14px",color:"#ffffff",textAlign:"right"}}>{fmt(t.avgViews||t.avgD7)}</div>
               <div style={{width:"55px",fontSize:"14px",fontWeight:"500",color:t.vsBaseline?.includes("+")?"#aaaaaa":"#de6f3f",textAlign:"right"}}>{t.vsBaseline}</div>
             </div>
           ))}
@@ -458,7 +458,7 @@ function ShowPage({show}) {
                 <tr key={i} style={{borderBottom:"1px solid #1a1a1a"}} onMouseEnter={e=>e.currentTarget.style.background="#f5f5f5"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                   <td style={{padding:"10px",color:"#aaaaaa",whiteSpace:"nowrap"}}>{ep.date?.slice(0,10)}</td>
                   <td style={{padding:"10px",color:"#1a1a1a",maxWidth:"260px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ep.title}</td>
-                  <td style={{padding:"10px",color:"#00222d",whiteSpace:"nowrap"}}>{fmt(ep.views)}</td>
+                  <td style={{padding:"10px",color:"#ffffff",whiteSpace:"nowrap"}}>{fmt(ep.views)}</td>
                   <td style={{padding:"10px",color:"#666666"}}>{fmt(ep.likes)}</td>
                   <td style={{padding:"10px",color:"#666666"}}>{fmt(ep.comments)}</td>
                   <td style={{padding:"10px",color:ep.guest?color:"#bbbbbb"}}>{ep.guest||"—"}</td>
@@ -626,7 +626,7 @@ function Trends() {
             <div key={i} style={{display:"flex",alignItems:"center",gap:"10px",padding:"7px 0",borderBottom:"1px solid #1a1a1a"}}>
               <div style={{fontSize:"14px",color:show.color,minWidth:"20px",fontWeight:"500"}}>#{i+1}</div>
               <div style={{flex:1,fontSize:"14px",color:"#1a1a1a",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ep.title}</div>
-              <div style={{fontSize:"14px",color:"#00222d",whiteSpace:"nowrap",fontWeight:"500"}}>{fmt(ep.views)}</div>
+              <div style={{fontSize:"14px",color:"#ffffff",whiteSpace:"nowrap",fontWeight:"500"}}>{fmt(ep.views)}</div>
             </div>
           ))}
         </div>
@@ -639,7 +639,7 @@ function Trends() {
               return (
                 <div key={m.key} style={{display:"flex",alignItems:"center",gap:"8px",padding:"7px 0",borderBottom:"1px solid #1a1a1a"}}>
                   <div style={{fontSize:"14px",color:"#aaaaaa",minWidth:"50px"}}>{m.key.split("-")[1]+"/"+m.key.split("-")[0].slice(-2)}</div>
-                  <div style={{flex:1,fontSize:"14px",color:"#00222d",fontWeight:"500"}}>{fmt(m.avg)}</div>
+                  <div style={{flex:1,fontSize:"14px",color:"#ffffff",fontWeight:"500"}}>{fmt(m.avg)}</div>
                   <div style={{fontSize:"14px",color:"#aaaaaa"}}>{m.count} eps</div>
                   {delta!==null&&<div style={{fontSize:"14px",fontWeight:"500",color:delta>=0?"#aaaaaa":"#de6f3f",minWidth:"45px",textAlign:"right"}}>{delta>=0?"+":""}{delta}%</div>}
                 </div>
@@ -660,9 +660,9 @@ export default function App() {
   const nav=[{id:"home",label:"Home"},{id:"pgm",label:"Prof G Markets"},{id:"pgp",label:"Prof G Pod"},{id:"rm",label:"Raging Moderates"},{id:"trends",label:"Trends"}];
   const shows = CHANNELS;
   return (
-    <div style={{minHeight:"100vh",background:"#ffffff",fontFamily:"'Barlow',sans-serif",color:"#00222d"}}>
+    <div style={{minHeight:"100vh",background:"#00222d",fontFamily:"'Barlow',sans-serif",color:"#ffffff"}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,700;0,900;1,700;1,900&family=Barlow+Condensed:ital,wght@0,400;0,700;0,900;1,700;1,900&display=swap');*{box-sizing:border-box;}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#0D0D0D}::-webkit-scrollbar-thumb{background:#2a2a2a;border-radius:2px}`}</style>
-      <div style={{position:"fixed",top:0,left:0,width:"200px",height:"100vh",background:"#ffffff",borderRight:"1px solid #1a1a1a",padding:"28px 0",display:"flex",flexDirection:"column",zIndex:10}}>
+      <div style={{position:"fixed",top:0,left:0,width:"200px",height:"100vh",background:"#00222d",borderRight:"1px solid #1a1a1a",padding:"28px 0",display:"flex",flexDirection:"column",zIndex:10}}>
         <div style={{padding:"0 20px",marginBottom:"32px"}}>
           <div style={{fontFamily:"'Barlow',sans-serif",fontSize:"18px",fontWeight:"700",fontStyle:"italic",textTransform:"uppercase",fontWeight:"900",color:"#fff"}}>PROF G</div>
           <div style={{fontSize:"9px",color:"#aaaaaa",letterSpacing:".15em",textTransform:"uppercase",marginTop:"2px"}}>Intelligence</div>
