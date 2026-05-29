@@ -96,6 +96,17 @@ async function fetchYT(channelId) {
   } catch(e){console.error("YT",e);return [];}
 }
 
+// ── YouTube Comments ─────────────────────────────────────────────────────────
+async function fetchYTComments(videoId) {
+  if (!YT_API_KEY || !videoId) return [];
+  try {
+    const r = await fetch(`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&videoId=${videoId}&maxResults=50&order=relevance&key=${YT_API_KEY}`);
+    const d = await r.json();
+    if (!d.items) return [];
+    return d.items.map(item => item.snippet.topLevelComment.snippet.textDisplay).filter(Boolean);
+  } catch(e) { console.error("Comments error", e); return []; }
+}
+
 // ── Claude API ────────────────────────────────────────────────────────────────
 async function ai(prompt,tokens=800) {
   try {
@@ -123,12 +134,29 @@ Respond ONLY in JSON (no markdown):
   catch {return null;}
 }
 
-async function genSentiment(title,showName,views) {
-  const prompt=`Podcast episode for ${showName}: "${title}"${views?`\nYouTube views: ${fmt(views)}`:""}
-Generate realistic audience sentiment.
+async function genSentiment(title,showName,views,ytId,comments) {
+  const hasComments = comments && comments.length > 0;
+  const prompt = hasComments
+    ? `You are analyzing real YouTube audience comments for a podcast episode.
+Show: ${showName}
+Episode: "${title}"
+YouTube views: ${fmt(views)}
+
+Real audience comments (${comments.length} comments):
+${comments.slice(0,30).map((c,i)=>`${i+1}. ${c.slice(0,200)}`).join("\n")}
+
+Based on these REAL comments, provide:
+1. A sentiment score 1-10
+2. A 3-4 sentence summary of what the audience actually said — what they praised, criticized, asked for more of
+3. 2-3 specific consensus points pulled directly from the comments
+
 Respond ONLY in JSON (no markdown):
-{"score":<1-10>,"summary":"<3-4 sentences>","consensus":["<point 1>","<point 2>","<point 3>"]}`;
-  try {const raw=await ai(prompt,500);return JSON.parse(raw.replace(/```json|```/g,"").trim());}
+{"score":<1-10>,"summary":"<3-4 sentences based on real comments>","consensus":["<direct insight from comments 1>","<direct insight from comments 2>","<direct insight from comments 3>"],"source":"real YouTube comments"}`
+    : `Podcast episode for ${showName}: "${title}"${views?`\nYouTube views: ${fmt(views)}`:""}
+Generate inferred audience sentiment based on topic and performance.
+Respond ONLY in JSON (no markdown):
+{"score":<1-10>,"summary":"<3-4 sentences>","consensus":["<point 1>","<point 2>","<point 3>"],"source":"AI inference (no comments available)"}`;
+  try {const raw=await ai(prompt,600);return JSON.parse(raw.replace(/```json|```/g,"").trim());}
   catch {return null;}
 }
 
@@ -225,6 +253,7 @@ function TakeawayBlock({showName,color,ytVideos,fallback}) {
         </button>
       </div>
       {!data&&!loading&&<div style={{fontSize:"14px",color:B.textMute,fontStyle:"italic",fontFamily:B.font}}>{hasYT?`✓ ${ytVideos.length} live YouTube episodes ready.`:"Click Generate with AI for this week's recommendations."}</div>}
+      <div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font,marginBottom:"8px"}}>AI analysis based on episode titles and YouTube view counts. Sentiment analysis uses real YouTube comments.</div>
       {loading&&<div style={{fontSize:"14px",color:B.textSub,fontFamily:B.font}}>Analyzing most recent episodes…</div>}
       {data?.takeaways?.map((t,i)=>(
         <div key={i} style={{marginBottom:"14px",paddingLeft:"14px",borderLeft:`2px solid ${color}55`}}>
@@ -237,9 +266,15 @@ function TakeawayBlock({showName,color,ytVideos,fallback}) {
 }
 
 // ── Sentiment ─────────────────────────────────────────────────────────────────
-function Sentiment({title,showName,views,color}) {
+function Sentiment({title,showName,views,color,ytId}) {
   const [s,setS]=useState(null); const [l,setL]=useState(false); const [open,setOpen]=useState(false);
-  const run=async()=>{if(s){setOpen(!open);return;}setL(true);const r=await genSentiment(title,showName,views);setS(r);setL(false);setOpen(true);};
+  const run=async()=>{
+    if(s){setOpen(!open);return;}
+    setL(true);
+    const comments = ytId ? await fetchYTComments(ytId) : [];
+    const r=await genSentiment(title,showName,views,ytId,comments);
+    setS(r);setL(false);setOpen(true);
+  };
   return (
     <div>
       <button onClick={run} disabled={l} style={{background:"transparent",border:`1px solid ${B.border}`,color:s?color:B.textMute,padding:"4px 12px",fontSize:"12px",cursor:"pointer",fontFamily:B.font,borderRadius:"3px",fontWeight:s?"700":"400"}}>
@@ -247,7 +282,8 @@ function Sentiment({title,showName,views,color}) {
       </button>
       {open&&s&&(
         <div style={{marginTop:"8px",...cardAlt}}>
-          <div style={{...heading,fontSize:"20px",color,marginBottom:"6px"}}>{s.score}/10</div>
+          <div style={{...heading,fontSize:"20px",color,marginBottom:"4px"}}>{s.score}/10</div>
+          <div style={{fontSize:"11px",color:s.source?.includes("real")?"#4fafb8":B.textMute,marginBottom:"8px",fontFamily:B.font}}>{s.source||"AI inference"}</div>
           <div style={{fontSize:"13px",color:B.textSub,lineHeight:"1.65",marginBottom:"10px",fontFamily:B.font}}>{s.summary}</div>
           {s.consensus?.map((c,i)=><div key={i} style={{fontSize:"13px",color:B.textSub,marginBottom:"5px",paddingLeft:"10px",borderLeft:`2px solid ${color}`,fontFamily:B.font}}>"{c}"</div>)}
           <button onClick={()=>setOpen(false)} style={{marginTop:"8px",background:"transparent",border:"none",color:B.textMute,fontSize:"12px",cursor:"pointer",fontFamily:B.font}}>close ↑</button>
@@ -381,8 +417,8 @@ function ShowPage({show}) {
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"10px",marginBottom:"20px"}}>
         {[
-          {l:"Rolling 4-ep avg",v:fmt(r4),s:p4?`${trend>=0?"+":""}${trend}% vs prior 4`:null,sc:trend>=0?"#4fafb8":"#de6f3f"},
-          {l:"Overall avg views",v:fmt(avgViews),s:`${displayEps.length} episodes`},
+          {l:"Rolling 4-ep avg (YT views)",v:fmt(r4),s:p4?`${trend>=0?"+":""}${trend}% vs prior 4`:null,sc:trend>=0?"#4fafb8":"#de6f3f"},
+          {l:"Avg YouTube views",v:fmt(avgViews),s:`across ${displayEps.length} episodes`},
           {l:"Top episode",v:fmt(top?.views),s:top?.title?.slice(0,28)+"…",ac:color},
           {l:"Data source",v:ytVideos.length>0?"YouTube":"Sheet",s:ytVideos.length>0?`${ytVideos.length} eps`:"fallback"},
         ].map((m,i)=>(
@@ -418,7 +454,7 @@ function ShowPage({show}) {
                   <td style={{padding:"10px",color:B.textSub}}>{fmt(ep.likes)}</td>
                   <td style={{padding:"10px",color:B.textSub}}>{fmt(ep.comments)}</td>
                   <td style={{padding:"10px",color:ep.guest?color:B.borderSub,fontWeight:ep.guest?"600":"400"}}>{ep.guest||"—"}</td>
-                  <td style={{padding:"10px"}}><Sentiment title={ep.title} showName={name} views={ep.views} color={color}/></td>
+                  <td style={{padding:"10px"}}><Sentiment title={ep.title} showName={name} views={ep.views} color={color} ytId={ep.ytId}/></td>
                 </tr>
               ))}
             </tbody>
@@ -465,7 +501,7 @@ function Home() {
               </div>
               <div style={{fontSize:"32px",fontWeight:"900",color:B.text,fontFamily:B.font,marginBottom:"2px"}}>{fmt(r4avg)}</div>
               <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"14px"}}>
-                <div style={{fontSize:"12px",color:B.textMute,fontFamily:B.font}}>rolling 4-ep avg</div>
+                <div style={{fontSize:"12px",color:B.textMute,fontFamily:B.font}}>rolling 4-ep avg · YouTube views</div>
                 {p4avg>0&&<div style={{fontSize:"12px",fontWeight:"700",color:trend>=0?"#4fafb8":"#de6f3f",fontFamily:B.font}}>{trend>=0?"+":""}{trend}% vs prior</div>}
               </div>
               <div style={{fontSize:"13px",color:B.textSub,lineHeight:"1.5",marginBottom:"4px",fontFamily:B.font,fontWeight:"600"}}>{top?.title?.slice(0,55)}{(top?.title?.length||0)>55?"…":""}</div>
@@ -507,7 +543,7 @@ function Trends() {
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"10px",marginBottom:"20px"}}>
         {[
-          {l:"Avg views",v:fmt(avgViews),s:`${eps.length} episodes`},
+          {l:"Avg YouTube views",v:fmt(avgViews),s:`across ${eps.length} episodes`},
           {l:"Best month",v:mavgs.length?fmt(Math.max(...mavgs.map(m=>m.avg))):"—",s:mavgs.find(m=>m.avg===maxAvg)?.key},
           {l:"Data source",v:vids.length>0?"Live YouTube":"Sheet",s:vids.length>0?`${vids.length} eps`:"fallback"},
         ].map((m,i)=>(
@@ -520,7 +556,7 @@ function Trends() {
       </div>
       {eps.length>1&&(
         <div style={{...card,marginBottom:"14px"}}>
-          <div style={{...label,marginBottom:"16px"}}>Episode performance trend (last {Math.min(eps.length,50)} episodes, oldest to newest)</div>
+          <div style={{...label,marginBottom:"16px"}}>YouTube views per episode — last {Math.min(eps.length,50)} episodes, oldest to newest</div>
           {(()=>{
             const chartEps=[...eps].sort((a,b)=>new Date(a.date||0)-new Date(b.date||0)).slice(-50);
             const maxV=Math.max(...chartEps.map(e=>e.views||0));
@@ -556,7 +592,7 @@ function Trends() {
       )}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px"}}>
         <div style={card}>
-          <div style={label}>Top 10 episodes</div>
+          <div style={label}>Top 10 episodes by YouTube views</div>
           {top10.map((ep,i)=>(
             <div key={i} style={{display:"flex",alignItems:"center",gap:"10px",padding:"8px 0",borderBottom:`1px solid ${B.borderSub}`}}>
               <div style={{fontSize:"13px",color:show.color,minWidth:"24px",fontWeight:"900",fontFamily:B.font}}>#{i+1}</div>
