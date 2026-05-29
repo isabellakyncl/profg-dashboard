@@ -577,23 +577,45 @@ function Trends() {
               const y=H-Math.round(((e.views||0)-minV)/range*(H-10))-5;
               return {x,y,e};
             });
+            const [selectedEp, setSelectedEp] = useState(null);
             return (
-              <div style={{position:"relative",height:`${H+30}px`,width:"100%"}}>
-                <svg width="100%" height={H} style={{overflow:"visible"}}>
+              <div style={{position:"relative",width:"100%"}}>
+                <svg width="100%" height={H} style={{overflow:"visible",cursor:"pointer"}}>
                   <polyline
                     points={points.map(p=>`${p.x}%,${p.y}`).join(" ")}
                     fill="none" stroke={show.color} strokeWidth="2" strokeLinejoin="round"/>
                   {points.map((p,i)=>(
-                    <circle key={i} cx={`${p.x}%`} cy={p.y} r="3" fill={show.color} opacity="0.7">
-                      <title>{p.e.title} — {fmt(p.e.views)} views ({p.e.date?.slice(0,10)})</title>
+                    <circle key={i} cx={`${p.x}%`} cy={p.y} r="5"
+                      fill={selectedEp===i?B.yellow:show.color}
+                      opacity="0.9"
+                      style={{cursor:"pointer"}}
+                      onClick={()=>setSelectedEp(selectedEp===i?null:i)}>
+                      <title>{p.e.title} — {fmt(p.e.views)} views</title>
                     </circle>
                   ))}
                 </svg>
-                <div style={{display:"flex",justifyContent:"space-between",marginTop:"6px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",margin:"6px 0 10px"}}>
                   <div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font}}>{chartEps[0]?.date?.slice(0,10)}</div>
-                  <div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font,textAlign:"center"}}>{fmt(minV)} — {fmt(maxV)} views range</div>
+                  <div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font,textAlign:"center"}}>{fmt(minV)} — {fmt(maxV)} views range · click any dot for details</div>
                   <div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font}}>{chartEps[chartEps.length-1]?.date?.slice(0,10)}</div>
                 </div>
+                {selectedEp!==null&&points[selectedEp]&&(
+                  <div style={{background:B.cardAlt,border:`1px solid ${show.color}`,borderRadius:"4px",padding:"14px 16px",marginTop:"4px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:"14px",fontWeight:"700",color:B.text,fontFamily:B.font,marginBottom:"6px"}}>{points[selectedEp].e.title}</div>
+                        <div style={{display:"flex",gap:"20px"}}>
+                          <div><div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font}}>YouTube views</div><div style={{fontSize:"18px",fontWeight:"900",color:show.color,fontFamily:B.font}}>{fmt(points[selectedEp].e.views)}</div></div>
+                          {points[selectedEp].e.likes>0&&<div><div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font}}>Likes</div><div style={{fontSize:"18px",fontWeight:"900",color:B.text,fontFamily:B.font}}>{fmt(points[selectedEp].e.likes)}</div></div>}
+                          {points[selectedEp].e.comments>0&&<div><div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font}}>Comments</div><div style={{fontSize:"18px",fontWeight:"900",color:B.text,fontFamily:B.font}}>{fmt(points[selectedEp].e.comments)}</div></div>}
+                          <div><div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font}}>Date</div><div style={{fontSize:"14px",fontWeight:"600",color:B.text,fontFamily:B.font}}>{points[selectedEp].e.date?.slice(0,10)}</div></div>
+                          {points[selectedEp].e.guest&&<div><div style={{fontSize:"11px",color:B.textMute,fontFamily:B.font}}>Guest</div><div style={{fontSize:"14px",fontWeight:"600",color:show.color,fontFamily:B.font}}>{points[selectedEp].e.guest}</div></div>}
+                        </div>
+                      </div>
+                      <button onClick={()=>setSelectedEp(null)} style={{background:"transparent",border:"none",color:B.textMute,fontSize:"18px",cursor:"pointer",fontFamily:B.font,marginLeft:"10px"}}>×</button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
