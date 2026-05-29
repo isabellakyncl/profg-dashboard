@@ -22,6 +22,15 @@ const B = {
   font:     "'Barlow', sans-serif",
 };
 
+// ── Global YouTube cache — fetches once per session, not on every page load ──
+const YT_CACHE = {};
+async function fetchYTCached(channelId) {
+  if (YT_CACHE[channelId]) return YT_CACHE[channelId];
+  const data = await fetchYT(channelId);
+  if (data.length > 0) YT_CACHE[channelId] = data;
+  return data;
+}
+
 const CHANNELS = {
   pgm: { id:"pgm", name:"Prof G Markets",   color:B.orange, channelId:"UCp4CBeq4nzeg9smAvdjPrig" },
   pgp: { id:"pgp", name:"Prof G Pod",       color:B.teal,   channelId:"UC1E1SVcVyU3ntWMSQEp38Yw" },
@@ -395,7 +404,7 @@ function ShowPage({show}) {
   const {id,name,color,channelId}=show;
   const fallback=FALLBACK[id]||[];
   const [ytVideos,setYtVideos]=useState([]); const [ytLoading,setYtLoading]=useState(true); const [sort,setSort]=useState("views");
-  useEffect(()=>{fetchYT(channelId).then(v=>{setYtVideos(v);setYtLoading(false);});},[channelId]);
+  useEffect(()=>{fetchYTCached(channelId).then(v=>{setYtVideos(v);setYtLoading(false);});},[channelId]);
   const displayEps=ytVideos.length>0?ytVideos:fallback.map(e=>({...e,views:e.d7,likes:0,comments:0}));
   const sorted=[...displayEps].sort((a,b)=>sort==="views"?(b.views||0)-(a.views||0):new Date(b.date||0)-new Date(a.date||0));
   const avgViews=displayEps.length?Math.round(displayEps.map(e=>e.views||0).reduce((a,b)=>a+b,0)/displayEps.length):0;
@@ -472,7 +481,7 @@ function Home() {
   const [ytMap,setYtMap]=useState({}); const [loaded,setLoaded]=useState(false);
   const today=new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
   useEffect(()=>{
-    Promise.all(shows.map(s=>fetchYT(s.channelId).then(v=>[s.id,v]))).then(results=>{
+    Promise.all(shows.map(s=>fetchYTCached(s.channelId).then(v=>[s.id,v]))).then(results=>{
       const map={};results.forEach(([id,v])=>{if(v.length)map[id]=v;});
       setYtMap(map);setLoaded(true);
     });
@@ -520,7 +529,7 @@ function Home() {
 function Trends() {
   const shows=Object.values(CHANNELS);
   const [active,setActive]=useState("pgm"); const [ytMap,setYtMap]=useState({});
-  useEffect(()=>{shows.forEach(s=>{fetchYT(s.channelId).then(v=>{if(v.length)setYtMap(prev=>({...prev,[s.id]:v}));});});},[]);
+  useEffect(()=>{shows.forEach(s=>{fetchYTCached(s.channelId).then(v=>{if(v.length)setYtMap(prev=>({...prev,[s.id]:v}));});});},[]);
   const show=CHANNELS[active]; const vids=ytMap[active]||[]; const fb=FALLBACK[active]||[];
   const eps=vids.length>0?vids:fb;
   const top10=[...eps].sort((a,b)=>(b.views||0)-(a.views||0)).slice(0,10);
