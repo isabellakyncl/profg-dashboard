@@ -4,12 +4,7 @@ const PASSWORD = "profg2025";
 const YT_API_KEY = process.env.REACT_APP_YT_API_KEY;
 
 // ── Brand ─────────────────────────────────────────────────────────────────────
-const B = {
-  bg:"#00222d",card:"#00303f",cardAlt:"#003a4a",border:"#005066",borderSub:"#003d52",
-  text:"#ffffff",textSub:"#b0d4db",textMute:"#6a9aa3",
-  teal:"#4fafb8",yellow:"#f4b547",orange:"#de6f3f",pink:"#d987b5",green:"#4fafb8",red:"#de6f3f",
-  font:"'Barlow', sans-serif",
-}
+const B = {bg:"#00222d",card:"#00303f",cardAlt:"#003a4a",border:"#005066",borderSub:"#003d52",text:"#ffffff",textSub:"#b0d4db",textMute:"#6a9aa3",teal:"#4fafb8",yellow:"#f4b547",orange:"#de6f3f",pink:"#d987b5",green:"#4fafb8",red:"#de6f3f",font:"'Barlow', sans-serif"}
 
 // ── Global YouTube cache — fetches once per session, not on every page load ──
 const YT_CACHE = {};
@@ -563,12 +558,7 @@ const PASSWORD = "profg2025";
 const YT_API_KEY = process.env.REACT_APP_YT_API_KEY;
 
 // ── Brand ─────────────────────────────────────────────────────────────────────
-const B = {
-  bg:"#00222d",card:"#00303f",cardAlt:"#003a4a",border:"#005066",borderSub:"#003d52",
-  text:"#ffffff",textSub:"#b0d4db",textMute:"#6a9aa3",
-  teal:"#4fafb8",yellow:"#f4b547",orange:"#de6f3f",pink:"#d987b5",green:"#4fafb8",red:"#de6f3f",
-  font:"'Barlow', sans-serif",
-}
+const B = {bg:"#00222d",card:"#00303f",cardAlt:"#003a4a",border:"#005066",borderSub:"#003d52",text:"#ffffff",textSub:"#b0d4db",textMute:"#6a9aa3",teal:"#4fafb8",yellow:"#f4b547",orange:"#de6f3f",pink:"#d987b5",green:"#4fafb8",red:"#de6f3f",font:"'Barlow', sans-serif"}
 
 // ── Global YouTube cache — fetches once per session, not on every page load ──
 const YT_CACHE = {};
