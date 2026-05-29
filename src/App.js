@@ -5,14 +5,14 @@ const YT_API_KEY = process.env.REACT_APP_YT_API_KEY;
 
 // ── Brand ─────────────────────────────────────────────────────────────────────
 const B = {
-  bg:       "#00222d",   // main background
-  card:     "#00303f",   // card background
-  cardAlt:  "#003a4a",   // slightly lighter card
-  border:   "#005066",   // borders
-  borderSub:"#003d52",   // subtle borders
-  text:     "#ffffff",   // primary text
-  textSub:  "#b0d4db",   // secondary text
-  textMute: "#6a9aa3",   // muted text
+  bg:       "#00222d",
+  card:     "#00303f",
+  cardAlt:  "#003a4a",
+  border:   "#005066",
+  borderSub:"#003d52",
+  text:     "#ffffff",
+  textSub:  "#b0d4db",
+  textMute: "#6a9aa3",
   teal:     "#4fafb8",   // teal accent
   yellow:   "#f4b547",   // yellow accent
   orange:   "#de6f3f",   // orange (Markets)
@@ -575,14 +575,14 @@ const YT_API_KEY = process.env.REACT_APP_YT_API_KEY;
 
 // ── Brand ─────────────────────────────────────────────────────────────────────
 const B = {
-  bg:       "#00222d",   // main background
-  card:     "#00303f",   // card background
-  cardAlt:  "#003a4a",   // slightly lighter card
-  border:   "#005066",   // borders
-  borderSub:"#003d52",   // subtle borders
-  text:     "#ffffff",   // primary text
-  textSub:  "#b0d4db",   // secondary text
-  textMute: "#6a9aa3",   // muted text
+  bg:       "#00222d",
+  card:     "#00303f",
+  cardAlt:  "#003a4a",
+  border:   "#005066",
+  borderSub:"#003d52",
+  text:     "#ffffff",
+  textSub:  "#b0d4db",
+  textMute: "#6a9aa3",
   teal:     "#4fafb8",   // teal accent
   yellow:   "#f4b547",   // yellow accent
   orange:   "#de6f3f",   // orange (Markets)
