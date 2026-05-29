@@ -582,17 +582,17 @@ function Trends() {
             const W = 800;
             const padL = 10, padR = 10, padT = 10, padB = 10;
             const chartW = W - padL - padR;
-            const chartH = H - padT - padB;
+            const chartH = chartHeight - padT - padB;
             return (
               <div style={{width:"100%"}}>
                 <div style={{position:"relative",overflowX:"auto"}}>
-                  <div style={{minWidth:"600px",position:"relative",height:`${H}px`,background:"transparent"}}>
+                  <div style={{minWidth:"600px",position:"relative",height:`${chartHeight}px`,background:"transparent"}}>
                     {/* Grid lines */}
                     {[0,0.25,0.5,0.75,1].map((pct,i)=>(
                       <div key={i} style={{position:"absolute",left:0,right:0,top:`${padT+chartH*(1-pct)}px`,borderTop:`1px solid ${B.border}`,opacity:0.3}}/>
                     ))}
                     {/* Line connecting dots */}
-                    <svg style={{position:"absolute",top:0,left:0,width:"100%",height:`${H}px`,overflow:"visible",pointerEvents:"none"}}>
+                    <svg style={{position:"absolute",top:0,left:0,width:"100%",height:`${chartHeight}px`,overflow:"visible",pointerEvents:"none"}}>
                       <polyline
                         points={points.map(p=>`${padL+p.x/100*chartW},${padT+p.y/H*chartH}`).join(" ")}
                         fill="none" stroke={show.color} strokeWidth="2.5" strokeLinejoin="round" opacity="0.8"/>
