@@ -578,7 +578,7 @@ function Trends() {
               return {x,y,e};
             });
             const [selectedEp, setSelectedEp] = useState(null);
-            const H = 140;
+            const CHART_H = 140;
             const W = 800;
             const padL = 10, padR = 10, padT = 10, padB = 10;
             const chartW = W - padL - padR;
