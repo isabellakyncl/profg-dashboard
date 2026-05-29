@@ -30,28 +30,28 @@ const CHANNELS = {
 
 const FALLBACK = {
   pgm: [
-    {date:"6/9/2025",  title:"Trump & Elon Break Up Over the Tax Bill",          d7:158325},
-    {date:"6/2/2025",  title:"Tariffs Blocked by Court, U.S. Steel's Golden Shares", d7:118781},
-    {date:"5/26/2025", title:"The Story of Scott's Career",                      d7:107827},
-    {date:"5/19/2025", title:"The GOP Tax Bill, United Health's Terrible Week",  d7:128342},
-    {date:"05/12/2025",title:"Is Google a Buy? + Is Uber Recession Proof?",      d7:127142},
-    {date:"05/05/2025",title:"Blockbuster Week For Big Tech Earnings",           d7:125789},
-    {date:"04/28/2025",title:"The Trump Fold and Tesla's Brand Death",           d7:131819},
-    {date:"04/07/2025",title:"The $6.6 Trillion Sell-off",                      d7:130941},
+    {date:"2026-05-26",title:"SpaceX Just Filed to IPO — ft. Patrick Boyle",views:383000,likes:12400,comments:892,ytId:""},
+    {date:"2026-05-19",title:"Inside Trump's 3,700 Trades — ft. Anthony Scaramucci",views:96000,likes:3200,comments:421,ytId:""},
+    {date:"2026-05-12",title:"The AI Boom Is Headed For a Crash — ft. Aswath Damodaran",views:236000,likes:8100,comments:1043,ytId:""},
+    {date:"2026-05-05",title:"Silicon Valley's Case Against Trump — ft. Jason Calacanis & Bradley Tusk",views:34000,likes:1200,comments:287,ytId:""},
+    {date:"2026-04-28",title:"How To Actually Tax The Rich — ft. Ray Madoff",views:73000,likes:2400,comments:312,ytId:""},
+    {date:"6/9/2025",  title:"Trump & Elon Break Up Over the Tax Bill",views:158325,likes:0,comments:0,ytId:""},
+    {date:"6/2/2025",  title:"Tariffs Blocked by Court, U.S. Steel's Golden Shares",views:118781,likes:0,comments:0,ytId:""},
+    {date:"5/26/2025", title:"The Story of Scott's Career",views:107827,likes:0,comments:0,ytId:""},
   ],
   pgp: [
-    {date:"4/21/2025", title:"Scott on AI, Loneliness, and What Matters at 60", d7:152740},
-    {date:"2/10/2025", title:"DeepSeek Changes Everything + DOGE's Damage",     d7:141280},
-    {date:"12/09/2024",title:"The UnitedHealthcare CEO Shooting",                d7:136829},
-    {date:"7/22/2024", title:"Why is Silicon Valley Backing Trump?",             d7:139584},
+    {date:"4/21/2025", title:"Scott on AI, Loneliness, and What Matters at 60",views:152740,likes:0,comments:0,ytId:""},
+    {date:"2/10/2025", title:"DeepSeek Changes Everything + DOGE's Damage",views:141280,likes:0,comments:0,ytId:""},
+    {date:"12/09/2024",title:"The UnitedHealthcare CEO Shooting",views:136829,likes:0,comments:0,ytId:""},
+    {date:"7/22/2024", title:"Why is Silicon Valley Backing Trump?",views:139584,likes:0,comments:0,ytId:""},
   ],
   rm: [
-    {date:"4/29/2026", title:"Trump Blames Democrats, Demands His Ballroom",    d7:91757},
-    {date:"4/22/2026", title:"How Trump's Iran War Could Break the GOP",        d7:97051},
-    {date:"4/15/2026", title:"Trump Spirals as Iran Blockade Triggers Recession Fears", d7:108830},
-    {date:"4/8/2026",  title:"Trump Threatens to WIPE OUT Iran",               d7:99469},
-    {date:"4/1/2026",  title:"Trump & Pentagon Now Completely Delusional",     d7:99511},
-    {date:"3/25/2026", title:"Did Trump Already LOSE the War in Iran?",        d7:112455},
+    {date:"4/29/2026", title:"Trump Blames Democrats, Demands His Ballroom",views:91757,likes:0,comments:0,ytId:""},
+    {date:"4/22/2026", title:"How Trump's Iran War Could Break the GOP (ft. Ben Shapiro)",views:97051,likes:0,comments:0,ytId:""},
+    {date:"4/15/2026", title:"Trump Spirals as Iran Blockade Triggers Recession Fears",views:108830,likes:0,comments:0,ytId:""},
+    {date:"4/8/2026",  title:"Trump Threatens to WIPE OUT Iran",views:99469,likes:0,comments:0,ytId:""},
+    {date:"4/1/2026",  title:"Trump & Pentagon Now Completely Delusional",views:99511,likes:0,comments:0,ytId:""},
+    {date:"3/25/2026", title:"Did Trump Already LOSE the War in Iran?",views:112455,likes:0,comments:0,ytId:""},
   ],
 };
 
@@ -487,7 +487,7 @@ function Home() {
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"12px",marginBottom:"28px"}}>
         {shows.map(s=>{
           const vids=ytMap[s.id]||[]; const fb=FALLBACK[s.id]||[];
-          const eps=vids.length>0?vids:fb.map(e=>({...e,views:e.d7}));
+          const eps=vids.length>0?vids:fb;
           const r4=eps.slice(0,4); const p4=eps.slice(4,8);
           const r4avg=r4.length?Math.round(r4.map(e=>e.views||0).reduce((a,b)=>a+b,0)/r4.length):0;
           const p4avg=p4.length?Math.round(p4.map(e=>e.views||0).reduce((a,b)=>a+b,0)/p4.length):0;
@@ -522,7 +522,7 @@ function Trends() {
   const [active,setActive]=useState("pgm"); const [ytMap,setYtMap]=useState({});
   useEffect(()=>{shows.forEach(s=>{fetchYT(s.channelId).then(v=>{if(v.length)setYtMap(prev=>({...prev,[s.id]:v}));});});},[]);
   const show=CHANNELS[active]; const vids=ytMap[active]||[]; const fb=FALLBACK[active]||[];
-  const eps=vids.length>0?vids:fb.map(e=>({...e,views:e.d7}));
+  const eps=vids.length>0?vids:fb;
   const top10=[...eps].sort((a,b)=>(b.views||0)-(a.views||0)).slice(0,10);
   const avgViews=eps.length?Math.round(eps.map(e=>e.views||0).reduce((a,b)=>a+b,0)/eps.length):0;
   const months={};
