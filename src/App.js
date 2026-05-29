@@ -574,7 +574,7 @@ function Trends() {
             const H=120;
             const points=chartEps.map((e,i)=>{
               const x=(i/(chartEps.length-1))*100;
-              const y=H-Math.round(((e.views||0)-minV)/range*(H-10))-5;
+              const y=120-Math.round(((e.views||0)-minV)/range*(H-10))-5;
               return {x,y,e};
             });
             const [selectedEp, setSelectedEp] = useState(null);
