@@ -1,6 +1,7 @@
 const YT_CACHE = {};
-const YT_CACHE = {};
 import { useState, useEffect } from "react";
+
+const YT_CACHE = {};
 
 const PASSWORD = "profg2025";
 const YT_KEY = process.env.REACT_APP_YT_API_KEY;
