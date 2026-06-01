@@ -25,14 +25,18 @@ const CHANNELS = {
 
 const FALLBACK = {
   pgm: [
-    {date:"2026-05-26",title:"SpaceX Just Filed to IPO - ft. Patrick Boyle",views:383000,likes:12400,comments:892,guest:"Patrick Boyle",ytId:""},
-    {date:"2026-05-19",title:"Inside Trump's 3,700 Trades - ft. Anthony Scaramucci",views:96000,likes:3200,comments:421,guest:"Anthony Scaramucci",ytId:""},
-    {date:"2026-05-12",title:"The AI Boom Is Headed For a Crash - ft. Aswath Damodaran",views:236000,likes:8100,comments:1043,guest:"Aswath Damodaran",ytId:""},
-    {date:"2026-05-05",title:"Silicon Valley's Case Against Trump - ft. Jason Calacanis",views:34000,likes:1200,comments:287,guest:"Jason Calacanis",ytId:""},
-    {date:"2026-04-28",title:"How To Actually Tax The Rich - ft. Ray Madoff",views:73000,likes:2400,comments:312,guest:"Ray Madoff",ytId:""},
-    {date:"2025-06-09",title:"Trump and Elon Break Up Over the Tax Bill",views:158325,likes:0,comments:0,guest:null,ytId:""},
-    {date:"2025-06-02",title:"Tariffs Blocked by Court",views:118781,likes:0,comments:0,guest:null,ytId:""},
-    {date:"2025-05-19",title:"The GOP Tax Bill, United Health's Terrible Week",views:128342,likes:0,comments:0,guest:null,ytId:""},
+    {date:"2026-06-01",title:"Netflix Chief on the Future of Hollywood - ft. Ted Sarandos",views:0,likes:0,comments:0,guest:"Ted Sarandos",ytId:""},
+    {date:"2026-05-29",title:"AI May Not Be Worth The Cost - Here's Why",views:0,likes:0,comments:0,guest:null,ytId:""},
+    {date:"2026-05-27",title:"Bond Investors Are Panicking. They May Be Right",views:0,likes:0,comments:0,guest:null,ytId:""},
+    {date:"2026-05-25",title:"How To Actually Tax The Rich",views:0,likes:0,comments:0,guest:null,ytId:""},
+    {date:"2026-05-22",title:"SpaceX Just Filed to IPO - The Numbers Are Ugly",views:0,likes:0,comments:0,guest:null,ytId:""},
+    {date:"2026-05-20",title:"Silicon Valley's Case Against the Wealth Tax",views:0,likes:0,comments:0,guest:null,ytId:""},
+    {date:"2026-05-17",title:"Inside Trump's 3,700 Trades - ft. Anthony Scaramucci",views:96000,likes:3200,comments:421,guest:"Anthony Scaramucci",ytId:""},
+    {date:"2026-05-15",title:"Inflation Is Soaring - Here's What Happens Next",views:0,likes:0,comments:0,guest:null,ytId:""},
+    {date:"2026-05-13",title:"Aswath Damodaran: The AI Boom Is Headed For A Reckoning",views:236000,likes:8100,comments:1043,guest:"Aswath Damodaran",ytId:""},
+    {date:"2026-05-10",title:"AI Skeptic: This Business Makes No Sense",views:0,likes:0,comments:0,guest:null,ytId:""},
+    {date:"2026-05-08",title:"Hottest Inflation Report In 3 Years Has One Big Problem",views:0,likes:0,comments:0,guest:null,ytId:""},
+    {date:"2026-05-06",title:"How AI Is Making Us All Dumber",views:0,likes:0,comments:0,guest:null,ytId:""},
   ],
   pgp: [
     {date:"2025-04-21",title:"Scott on AI, Loneliness, and What Matters at 60",views:152740,likes:0,comments:0,guest:null,ytId:""},
@@ -50,7 +54,6 @@ const FALLBACK = {
   ],
 };
 
-const YT_CACHE = {};
 
 function fmt(n) {
   if (!n && n !== 0) return "—";
@@ -69,7 +72,7 @@ function parseDate(s) {
 
 async function fetchYT(channelId) {
   if (!YT_KEY || !channelId) return [];
-  // Cache disabled - always fetch fresh
+  if (YT_CACHE[channelId]) return YT_CACHE[channelId];
   try {
     const s = await fetch("https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=" + channelId + "&maxResults=50&order=date&type=video&key=" + YT_KEY);
     const sd = await s.json();
@@ -92,7 +95,6 @@ async function fetchYT(channelId) {
         guest: gm ? gm[1] : null,
       };
     }).sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
-    console.log("YT fetch for", channelId, "got", results.length, "videos, first:", results[0] && results[0].title, results[0] && results[0].date);    console.log("YT fetch for", channelId, "got", results.length, "videos, first:", results[0] && results[0].title, results[0] && results[0].date);    if (results.length > 0) YT_CACHE[channelId] = results;
     return results;
   } catch(e) { return []; }
 }
