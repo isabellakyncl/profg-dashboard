@@ -76,7 +76,7 @@ async function fetchYT(channelId) {
   if (!YT_KEY || !channelId) return [];
   if (YT_CACHE[channelId]) return YT_CACHE[channelId];
   try {
-    const s = await fetch("https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=" + channelId + "&maxResults=50&order=date&type=video&key=" + YT_KEY);
+    const s = await fetch("https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=" + channelId + "&maxResults=50&order=date&publishedAfter=2026-01-01T00:00:00Z&type=video&key=" + YT_KEY);
     const sd = await s.json();
     if (!sd.items || !sd.items.length) return [];
     const ids = sd.items.map(function(v) { return v.id.videoId; }).filter(Boolean).join(",");
