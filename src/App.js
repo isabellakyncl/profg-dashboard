@@ -1,4 +1,5 @@
 const YT_CACHE = {};
+const YT_CACHE = {};
 import { useState, useEffect } from "react";
 
 const PASSWORD = "profg2025";
