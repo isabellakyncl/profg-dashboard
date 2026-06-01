@@ -92,7 +92,7 @@ async function fetchYT(channelId) {
         guest: gm ? gm[1] : null,
       };
     }).sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
-    console.log("YT fetch for", channelId, "got", results.length, "videos, first:", results[0] && results[0].title, results[0] && results[0].date);    if (results.length > 0) YT_CACHE[channelId] = results;
+    console.log("YT fetch for", channelId, "got", results.length, "videos, first:", results[0] && results[0].title, results[0] && results[0].date);    console.log("YT fetch for", channelId, "got", results.length, "videos, first:", results[0] && results[0].title, results[0] && results[0].date);    if (results.length > 0) YT_CACHE[channelId] = results;
     return results;
   } catch(e) { return []; }
 }
