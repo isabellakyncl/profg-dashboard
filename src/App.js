@@ -69,7 +69,7 @@ function parseDate(s) {
 
 async function fetchYT(channelId) {
   if (!YT_KEY || !channelId) return [];
-  if (YT_CACHE[channelId]) return YT_CACHE[channelId];
+  // Cache disabled - always fetch fresh
   try {
     const s = await fetch("https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=" + channelId + "&maxResults=50&order=date&type=video&key=" + YT_KEY);
     const sd = await s.json();
